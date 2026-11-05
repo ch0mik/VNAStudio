@@ -1,0 +1,15 @@
+**/bin/
+**/obj/
+**/.artifacts/
+**/artifacts/
+**/TestResults/
+**/coverage/
+.vs/
+.idea/
+*.user
+*.suo
+*.cache
+*.log
+*.tmp
+.DS_Store
+Thumbs.db

@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>Vna.Core</AssemblyName>
+    <RootNamespace>Vna.Core</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Vna.Localization\Vna.Localization.csproj" />
+  </ItemGroup>
+</Project>

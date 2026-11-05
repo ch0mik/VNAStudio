@@ -1,0 +1,7 @@
+# Przegląd katalogu projektu i panelu ustawień
+
+Katalog `VnaStudio` jest katalogiem głównym projektu. Skopiowano kod, testy, workflow wydania, dokumentację, OpenSpec i tekstowe materiały analityczne oraz ilustracje. Nie skopiowano oryginalnych plików wykonywalnych, instalatorów, bibliotek, archiwum dekompilacji ani projektów Ghidra; ich prawa redystrybucji nie zostały ustalone. Pozostałe materiały źródłowe osób trzecich również wymagają przeglądu praw przed publiczną publikacją.
+
+Panel ustawień poszerzono z 270 do 310 DIP, a po końcowym przeglądzie podglądów do 350 DIP; pozostawiono margines na nakładający się pasek przewijania. Minimalne okno wynosi teraz 1024 × 768 DIP, z mniejszymi czcionkami interfejsu. Hold znajduje się przy zakresie skanu, Start/Stop są w jednym wierszu, a przyciski zakresu markerów mieszczą się w panelu. Test Avalonia Headless sprawdza odstęp pól i list od krawędzi obszaru przewijania przy minimalnym rozmiarze, testy wykresu obejmują zmianę rozmiaru i DPI, a sześć podglądów 1440×900 odświeżono i sprawdzono wizualnie.
+
+W nowym katalogu: `dotnet test Vna.slnx --configuration Release -p:NuGetAudit=false -p:UsedAvaloniaProducts=`: 59/59; `tests/release/Release.Tests.ps1`: 33 kontrole; `openspec validate port-vna-to-csharp --strict`: poprawne. Zrzuty motywów wygenerowano ponownie po zmianie szerokości panelu. Pomiar na rzeczywistym urządzeniu nie był częścią tego przeglądu.

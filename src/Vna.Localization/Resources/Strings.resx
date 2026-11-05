@@ -1,0 +1,275 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <data name="WindowTitle" xml:space="preserve"><value>VNA Studio</value></data>
+  <data name="AppName" xml:space="preserve"><value>VNA Studio</value></data>
+  <data name="Tagline" xml:space="preserve"><value>ANTENNA MEASUREMENT</value></data>
+  <data name="ScanSettings" xml:space="preserve"><value>Scan settings</value></data>
+  <data name="FrequencyRange" xml:space="preserve"><value>Frequency range</value></data>
+  <data name="StartFrequency" xml:space="preserve"><value>START · MHz</value></data>
+  <data name="StopFrequency" xml:space="preserve"><value>STOP · MHz</value></data>
+  <data name="SerialPortLabel" xml:space="preserve"><value>SERIAL PORT / DEVICE PATH</value></data>
+  <data name="MeasurementSource" xml:space="preserve"><value>MEASUREMENT SOURCE</value></data>
+  <data name="UseHardwareSource" xml:space="preserve"><value>Use VNA device instead of demo</value></data>
+  <data name="HardwareDevice" xml:space="preserve"><value>VNA hardware (COM)</value></data>
+  <data name="PlaybackDevice" xml:space="preserve"><value>Saved session playback</value></data>
+  <data name="SourceDemo" xml:space="preserve"><value>Demonstration data</value></data>
+  <data name="SourceHardware" xml:space="preserve"><value>VNA hardware</value></data>
+  <data name="SourcePlayback" xml:space="preserve"><value>Session playback</value></data>
+  <data name="PlaybackSourceHint" xml:space="preserve"><value>Replays the loaded session at its saved frequency range and point count, without interpolation.</value></data>
+  <data name="PlaybackOpenSessionHint" xml:space="preserve"><value>Open a compatible saved session before connecting playback.</value></data>
+  <data name="HardwareSourceHint" xml:space="preserve"><value>Uses the configured serial path and verified profile. Errors keep this source selected; demo data are not substituted.</value></data>
+  <data name="DemoSourceHint" xml:space="preserve"><value>Uses clearly labelled synthetic samples. The serial port is not opened.</value></data>
+  <data name="ConnectDevice" xml:space="preserve"><value>Connect to VNA</value></data>
+  <data name="DisconnectDevice" xml:space="preserve"><value>Disconnect VNA</value></data>
+  <data name="StatusConnectingHardware" xml:space="preserve"><value>Connecting to VNA hardware…</value></data>
+  <data name="StatusConnectedHardware" xml:space="preserve"><value>Serial port opened. Start a scan to check the VNA response.</value></data>
+  <data name="StatusConnectingPlayback" xml:space="preserve"><value>Preparing saved session playback…</value></data>
+  <data name="StatusConnectedPlayback" xml:space="preserve"><value>Saved session playback ready.</value></data>
+  <data name="StatusAcquiringPlayback" xml:space="preserve"><value>Replaying saved samples…</value></data>
+  <data name="StatusDisconnectedHardware" xml:space="preserve"><value>VNA hardware disconnected.</value></data>
+  <data name="StatusConnectingSource" xml:space="preserve"><value>Connecting to measurement source…</value></data>
+  <data name="StatusAcquiringHardware" xml:space="preserve"><value>Reading samples from VNA hardware…</value></data>
+  <data name="StatusAcquiringDemo" xml:space="preserve"><value>Generating demonstration samples…</value></data>
+  <data name="StatusConnectFailed" xml:space="preserve"><value>Could not connect to VNA hardware.</value></data>
+  <data name="SerialPortPlaceholder" xml:space="preserve"><value>e.g. COM5 or /dev/ttyUSB0</value></data>
+  <data name="SerialPortHint" xml:space="preserve"><value>The value is passed unchanged and stored per system. Demo mode does not open the port.</value></data>
+  <data name="DetectPorts" xml:space="preserve"><value>Detect system ports</value></data>
+  <data name="PortListHint" xml:space="preserve"><value>The list offers suggestions; a manually entered path is also preserved.</value></data>
+  <data name="SaveSettings" xml:space="preserve"><value>Save settings</value></data>
+  <data name="PointCount" xml:space="preserve"><value>NUMBER OF POINTS</value></data>
+  <data name="StartScan" xml:space="preserve"><value>▶   Start scan</value></data>
+  <data name="Hold" xml:space="preserve"><value>Hold</value></data>
+  <data name="SingleScanHint" xml:space="preserve"><value>Press Start for one scan. Clear Hold to start continuous measurements.</value></data>
+  <data name="ContinuousScanHint" xml:space="preserve"><value>Measurements repeat until Hold is checked. The current complete scan is kept; partial scans never replace it.</value></data>
+  <data name="HoldAfterSweepHint" xml:space="preserve"><value>Hold pauses continuous measurements after the current complete scan. Clear Hold to resume.</value></data>
+  <data name="StopScan" xml:space="preserve"><value>■   Stop</value></data>
+  <data name="OpenSession" xml:space="preserve"><value>Open JSON session…</value></data>
+  <data name="OpenCsv" xml:space="preserve"><value>Import Analyser/VNA Studio CSV…</value></data>
+  <data name="OpenCsvTitle" xml:space="preserve"><value>Import measurement CSV</value></data>
+  <data name="CsvLoaded" xml:space="preserve"><value>Loaded {0} ({1} samples).</value></data>
+  <data name="CsvOpenFailed" xml:space="preserve"><value>Could not import CSV: {0}</value></data>
+  <data name="SaveSession" xml:space="preserve"><value>Save JSON session…</value></data>
+  <data name="Traces" xml:space="preserve"><value>TRACES</value></data>
+  <data name="Markers" xml:space="preserve"><value>MARKERS</value></data>
+  <data name="MarkerHint" xml:space="preserve"><value>Left/right click or drag selects M1/M2. Pan: Shift+left-drag or middle-drag.</value></data>
+  <data name="ChartTitle" xml:space="preserve"><value>Frequency response</value></data>
+  <data name="ZoomMarkers" xml:space="preserve"><value>Zoom M1–M2</value></data>
+  <data name="ZoomIn" xml:space="preserve"><value>Zoom in (+): halve the frequency span.</value></data>
+  <data name="ZoomOut" xml:space="preserve"><value>Zoom out (−): double the frequency span, up to the profile range.</value></data>
+  <data name="PreviousRange" xml:space="preserve"><value>Previous range</value></data>
+  <data name="FullRange" xml:space="preserve"><value>Full range</value></data>
+  <data name="FullSweepRange" xml:space="preserve"><value>Full scan range</value></data>
+  <data name="SweepRangeFromMarkers" xml:space="preserve"><value>Use marker range</value></data>
+  <data name="MinimumSwr" xml:space="preserve"><value>MINIMUM SWR</value></data>
+  <data name="Samples" xml:space="preserve"><value>SAMPLES</value></data>
+  <data name="LanguageLabel" xml:space="preserve"><value>LANGUAGE</value></data>
+  <data name="LanguageHint" xml:space="preserve"><value>The language changes immediately and is saved automatically when the application closes.</value></data>
+  <data name="TraceSwr" xml:space="preserve"><value>SWR</value></data>
+  <data name="TraceReturnLoss" xml:space="preserve"><value>Return loss</value></data>
+  <data name="TracePhase" xml:space="preserve"><value>Phase</value></data>
+  <data name="TraceImpedance" xml:space="preserve"><value>|Z|</value></data>
+  <data name="TraceResistance" xml:space="preserve"><value>R</value></data>
+  <data name="TraceReactance" xml:space="preserve"><value>|X|</value></data>
+  <data name="SaveSessionTitle" xml:space="preserve"><value>Save measurement session</value></data>
+  <data name="OpenSessionTitle" xml:space="preserve"><value>Open measurement session</value></data>
+  <data name="SessionFileType" xml:space="preserve"><value>VNA session (JSON)</value></data>
+  <data name="SaveRequiresComplete" xml:space="preserve"><value>A complete scan or loaded session is required for saving.</value></data>
+  <data name="SessionSaved" xml:space="preserve"><value>Session saved: {0}</value></data>
+  <data name="SessionOpenFailed" xml:space="preserve"><value>Could not open the session: {0}</value></data>
+  <data name="SettingsSaved" xml:space="preserve"><value>Settings saved.</value></data>
+  <data name="SettingsSaveFailed" xml:space="preserve"><value>Could not save settings: {0}</value></data>
+  <data name="MissingViewModel" xml:space="preserve"><value>The window has no view model.</value></data>
+  <data name="MissingPlot" xml:space="preserve"><value>MainWindow does not contain the Plot control.</value></data>
+  <data name="StatusReady" xml:space="preserve"><value>Ready. Device not connected.</value></data>
+  <data name="PortsEmpty" xml:space="preserve"><value>No ports reported by the system; you can enter a path manually.</value></data>
+  <data name="PortsFound" xml:space="preserve"><value>Ports found: {0}.</value></data>
+  <data name="PortDiscoveryFailed" xml:space="preserve"><value>Could not detect ports: {0}</value></data>
+  <data name="SessionStopFirst" xml:space="preserve"><value>Stop the current scan before opening a session.</value></data>
+  <data name="SessionProfileMismatch" xml:space="preserve"><value>The session uses profile {0}, but the application uses {1}.</value></data>
+  <data name="SessionSampleCountMismatch" xml:space="preserve"><value>The session sample count does not match the scan settings.</value></data>
+  <data name="SessionPointFrequencyMismatch" xml:space="preserve"><value>Sample {0} frequency does not match the scan settings.</value></data>
+  <data name="SessionLoaded" xml:space="preserve"><value>Session loaded · {0} points</value></data>
+  <data name="UnknownSource" xml:space="preserve"><value>unknown source</value></data>
+  <data name="DemoData" xml:space="preserve"><value>DEMONSTRATION DATA</value></data>
+  <data name="SessionSourceFormat" xml:space="preserve"><value>SESSION · {0}</value></data>
+  <data name="InvalidSampleReadout" xml:space="preserve"><value>No valid measurement for this sample</value></data>
+  <data name="MarkerEmptyReadout" xml:space="preserve"><value>SWR —   RL —   φ —   |Z| —   R —   |X| —</value></data>
+  <data name="MarkerReadoutFormat" xml:space="preserve"><value>SWR {0}   RL {1} dB   φ {2}°   |Z| {3} Ω   R {4} Ω   |X| {5} Ω</value></data>
+  <data name="MinimumSwrFormat" xml:space="preserve"><value>{0:0.000} @ {1:0.000} MHz</value></data>
+  <data name="MarkerFrequencyFormat" xml:space="preserve"><value>{0:0.000} MHz</value></data>
+  <data name="StatusConnectingDemo" xml:space="preserve"><value>Connecting to the measurement source…</value></data>
+  <data name="StatusGeneratingDemo" xml:space="preserve"><value>Acquiring measurement samples…</value></data>
+  <data name="StatusScanComplete" xml:space="preserve"><value>Scan complete · {0} points</value></data>
+  <data name="StatusScanStopped" xml:space="preserve"><value>Scan stopped · {0} points</value></data>
+  <data name="StatusScanFailed" xml:space="preserve"><value>Could not complete the scan</value></data>
+  <data name="StatusDisconnectFailed" xml:space="preserve"><value>Could not close the device connection</value></data>
+  <data name="FieldInvalid" xml:space="preserve"><value>Enter a valid value for: {0}.</value></data>
+  <data name="PointCountInteger" xml:space="preserve"><value>The number of points must be an integer.</value></data>
+  <data name="StartFieldName" xml:space="preserve"><value>Start [MHz]</value></data>
+  <data name="StopFieldName" xml:space="preserve"><value>Stop [MHz]</value></data>
+  <data name="SweepStopGreater" xml:space="preserve"><value>The stop frequency must be greater than the start frequency.</value></data>
+  <data name="SweepPointCount" xml:space="preserve"><value>The number of samples must be 2–4000.</value></data>
+  <data name="SweepRange" xml:space="preserve"><value>The range must be within {0:0.###}–{1:0.###} MHz.</value></data>
+  <data name="ReferenceImpedancePositive" xml:space="preserve"><value>The reference impedance must be positive and finite.</value></data>
+  <data name="StreamNotWritable" xml:space="preserve"><value>The stream is not writable.</value></data>
+  <data name="StreamNotReadable" xml:space="preserve"><value>The stream is not readable.</value></data>
+  <data name="SessionEmpty" xml:space="preserve"><value>The file does not contain a measurement session.</value></data>
+  <data name="SessionFormatUnsupported" xml:space="preserve"><value>Unsupported session format version: {0}.</value></data>
+  <data name="SessionProfileMissing" xml:space="preserve"><value>The session does not contain a device profile.</value></data>
+  <data name="SessionSnapshotInvalid" xml:space="preserve"><value>The session profile snapshot is invalid or inconsistent with ProfileId.</value></data>
+  <data name="SessionSweepMissing" xml:space="preserve"><value>The session does not contain scan settings.</value></data>
+  <data name="SessionPointCountMismatch" xml:space="preserve"><value>The session point count does not match the scan parameters.</value></data>
+  <data name="SessionPointEmpty" xml:space="preserve"><value>Sample {0} is empty.</value></data>
+  <data name="SessionPointQualityUnknown" xml:space="preserve"><value>Sample {0} has an unknown quality state.</value></data>
+  <data name="SmithChartTitle" xml:space="preserve"><value>Smith chart · normalized impedance</value></data>
+  <data name="ChartViewFrequency" xml:space="preserve"><value>Frequency</value></data>
+  <data name="ChartViewSmith" xml:space="preserve"><value>Smith</value></data>
+  <data name="ChartViewBoth" xml:space="preserve"><value>Both</value></data>
+  <data name="SmithZoomLabel" xml:space="preserve"><value>Smith view</value></data>
+  <data name="SmithZoomIn" xml:space="preserve"><value>Zoom into Smith chart</value></data>
+  <data name="SmithZoomOut" xml:space="preserve"><value>Zoom out of Smith chart</value></data>
+  <data name="SmithResetView" xml:space="preserve"><value>Reset Smith view</value></data>
+  <data name="SmithReference" xml:space="preserve"><value>Z₀ = {0} Ω</value></data>
+  <data name="SmithReferenceUnknown" xml:space="preserve"><value>Z₀ unknown · normalized Γ only</value></data>
+  <data name="SmithMatched" xml:space="preserve"><value>matched</value></data>
+  <data name="SmithNoComplexData" xml:space="preserve"><value>No usable phase or complex impedance data</value></data>
+  <data name="SmithOutsideCount" xml:space="preserve"><value>Outside unit circle: {0}</value></data>
+  <data name="SmithPhaseAmbiguous" xml:space="preserve"><value>Phase sign unconfirmed · mirrored traces</value></data>
+  <data name="SessionPointPhaseConfidenceUnknown" xml:space="preserve"><value>Sample {0} has an unknown phase confidence.</value></data>
+  <data name="SessionPointPhaseProvenanceMissing" xml:space="preserve"><value>Sample {0} marks phase confidence verified without valid evidence.</value></data>
+  <data name="SessionPointPhaseConfidenceMismatch" xml:space="preserve"><value>Sample {0} has phase confidence but no phase measurement.</value></data>
+  <data name="IniProfileNameRequired" xml:space="preserve"><value>The INI profile must have an identifier and a name.</value></data>
+  <data name="IniFrequencyRangeInvalid" xml:space="preserve"><value>The INI frequency range is invalid.</value></data>
+  <data name="IniDeviceTypeInvalid" xml:space="preserve"><value>The INI port type or VNA protocol type is unsupported.</value></data>
+  <data name="DdsSweepWordsOutOfRange" xml:space="preserve"><value>The requested scan cannot be represented by the configured DDS clock.</value></data>
+  <data name="SerialStepPauseUnsupported" xml:space="preserve"><value>This serial scan protocol does not support a per-step delay setting.</value></data>
+  <data name="SerialFilterModeUnverified" xml:space="preserve"><value>Filter mode is available for demo and session playback only. Its hardware command is not verified for this VNA 1–65 MHz model.</value></data>
+  <data name="IniPointCountInvalid" xml:space="preserve"><value>Champ in the INI must be 2–4000.</value></data>
+  <data name="IniDdsInvalid" xml:space="preserve"><value>DDS_CLOCK and DDS_PLL in the INI must be positive.</value></data>
+  <data name="IniPausesInvalid" xml:space="preserve"><value>Scan delays in the INI cannot be negative.</value></data>
+  <data name="IniAdcInvalid" xml:space="preserve"><value>The INI Z_value or ADC resolution is invalid.</value></data>
+  <data name="IniCalibrationInvalid" xml:space="preserve"><value>The INI calibration coefficients or InputVelFactor are invalid.</value></data>
+  <data name="IniGeneratorMemoryInvalid" xml:space="preserve"><value>The generator memory must contain either no values or ten frequencies within the profile range.</value></data>
+  <data name="IniBandRangeInvalid" xml:space="preserve"><value>Each legacy band range must have both endpoints, with a positive start below its stop.</value></data>
+  <data name="IniColorInvalid" xml:space="preserve"><value>An INI chart color must be within COLORREF 0–0xFFFFFF.</value></data>
+  <data name="SerialAlreadyOpen" xml:space="preserve"><value>The serial port is already open.</value></data>
+  <data name="SerialPortRequired" xml:space="preserve"><value>Enter a serial port name or path.</value></data>
+  <data name="SerialPortAccessDenied" xml:space="preserve"><value>Cannot access port {0}. Close PuTTY, the original analyser and other programs using the port, then reconnect. The system may also deny access due to permissions. System details: {1}</value></data>
+  <data name="SerialBaudInvalid" xml:space="preserve"><value>The port baud rate must be greater than zero.</value></data>
+  <data name="SerialDataBitsInvalid" xml:space="preserve"><value>The number of data bits must be 5–8.</value></data>
+  <data name="SerialReadTimeoutInvalid" xml:space="preserve"><value>The read timeout must be positive or infinite.</value></data>
+  <data name="SerialReadTimeout" xml:space="preserve"><value>The port read exceeded the timeout of {0}.</value></data>
+  <data name="SerialStreamClosed" xml:space="preserve"><value>The port closed the stream after receiving {0} of {1} bytes.</value></data>
+  <data name="SerialNotOpen" xml:space="preserve"><value>The serial port is not open.</value></data>
+  <data name="DeviceConnectFirst" xml:space="preserve"><value>Connect to the device before starting a scan.</value></data>
+  <data name="DeviceAlreadyConnected" xml:space="preserve"><value>The device is already connected.</value></data>
+  <data name="PlotAreaInvalid" xml:space="preserve"><value>The chart area must have positive, finite dimensions.</value></data>
+  <data name="ThemeLabel" xml:space="preserve"><value>THEME</value></data>
+  <data name="ThemeLight" xml:space="preserve"><value>Light</value></data>
+  <data name="ThemeDark" xml:space="preserve"><value>Dark</value></data>
+  <data name="ThemeNightVision" xml:space="preserve"><value>Night Vision (red)</value></data>
+  <data name="ThemeHint" xml:space="preserve"><value>Changes apply immediately. The theme is saved automatically when the application closes.</value></data>
+  <data name="NightVisionHint" xml:space="preserve"><value>Red display. Traces use different dash patterns; measurement values are preserved.</value></data>
+  <data name="DeviceProfileLabel" xml:space="preserve"><value>Device profile</value></data>
+  <data name="ValueFrequency" xml:space="preserve"><value>FREQ. MHz</value></data>
+  <data name="ValuePhase" xml:space="preserve"><value>PHASE °</value></data>
+  <data name="TraceAll" xml:space="preserve"><value>All</value></data>
+  <data name="TraceNone" xml:space="preserve"><value>None</value></data>
+  <data name="MarkerPrevious" xml:space="preserve"><value>Previous sample</value></data>
+  <data name="MarkerNext" xml:space="preserve"><value>Next sample</value></data>
+  <data name="ShowMinimumSwr" xml:space="preserve"><value>Show minimum SWR</value></data>
+  <data name="SetMarker1Minimum" xml:space="preserve"><value>Set M1 to minimum</value></data>
+  <data name="Reset" xml:space="preserve"><value>Reset</value></data>
+  <data name="ModeAntenna" xml:space="preserve"><value>Antenna</value></data>
+  <data name="ModeCableLoss" xml:space="preserve"><value>Cable Loss</value></data>
+  <data name="ModeCableLength" xml:space="preserve"><value>Cable Length</value></data>
+  <data name="ModeXtal" xml:space="preserve"><value>Xtal</value></data>
+  <data name="ModeFilter" xml:space="preserve"><value>Filter</value></data>
+  <data name="ModeGenerator" xml:space="preserve"><value>Generator</value></data>
+  <data name="CableLossTitle" xml:space="preserve"><value>One-port cable loss estimate</value></data>
+  <data name="CableLossHint" xml:space="preserve"><value>Connect the cable to ANT and leave its far end open or shorted. The displayed one-way loss is derived as −Return Loss / 2; connector, mismatch and fixture errors are not removed.</value></data>
+  <data name="CableLossFixtureCheck" xml:space="preserve"><value>Cable is connected to ANT; far end is open or shorted (not terminated in 50 Ω)</value></data>
+  <data name="CableLossFixtureRequired" xml:space="preserve"><value>Confirm the cable fixture above after connecting an open- or short-ended cable to ANT.</value></data>
+  <data name="CableLossHardwareDataRequired" xml:space="preserve"><value>Cable Loss needs a completed hardware scan or a hardware Cable Loss session. Demonstration data is not a cable measurement.</value></data>
+  <data name="FilterTitle" xml:space="preserve"><value>Scalar filter response</value></data>
+  <data name="FilterHint" xml:space="preserve"><value>Connect ANT to WOB with a through cable for the reference, then replace it with the filter. The plot uses the profile FILTER offset. This legacy scalar response has no verified phase and is not calibrated S21. Hardware Filter scans are disabled until the command is verified for this VNA 1–65 MHz.</value></data>
+  <data name="ModeAntennaAvailable" xml:space="preserve"><value>Antenna reflection view. The current source is demonstration data.</value></data>
+  <data name="ModeCableLossUnavailable" xml:space="preserve"><value>Cable loss needs a verified measurement method and calibrated device data.</value></data>
+  <data name="ModeCableLengthUnavailable" xml:space="preserve"><value>Cable length needs verified resonance data and a confirmed velocity factor.</value></data>
+  <data name="CableLengthTitle" xml:space="preserve"><value>Cable length estimate</value></data>
+  <data name="CableLengthHint" xml:space="preserve"><value>Use an open- or short-ended cable and place M1/M2 on adjacent peaks or adjacent dips. The supplied manual warns that measurements below 60 MHz may be poor; determine the cable velocity factor experimentally or from its specification. The manual gives about 0.63 for LAN cable and 0.50 for an outdoor extension as examples.</value></data>
+  <data name="CableMarker1" xml:space="preserve"><value>LOWER RESONANCE · M1</value></data>
+  <data name="CableMarker2" xml:space="preserve"><value>UPPER RESONANCE · M2</value></data>
+  <data name="CableVelocityFactor" xml:space="preserve"><value>CABLE VELOCITY FACTOR (0–1]</value></data>
+  <data name="CableLengthInvalidVelocityFactor" xml:space="preserve"><value>Enter a velocity factor greater than 0 and no greater than 1.</value></data>
+  <data name="CableLengthDistinctMarkers" xml:space="preserve"><value>Choose two different marker frequencies.</value></data>
+  <data name="CableLengthMarkerOutsideSweep" xml:space="preserve"><value>Both markers must match samples in the current measurement.</value></data>
+  <data name="CableLengthGapBetweenMarkers" xml:space="preserve"><value>The sweep has a missing or invalid sample between the markers.</value></data>
+  <data name="CableLengthMarkersAtResonances" xml:space="preserve"><value>Place each marker on an SWR peak or dip.</value></data>
+  <data name="CableLengthSeparateResonances" xml:space="preserve"><value>Place the markers on two different SWR resonances.</value></data>
+  <data name="CableLengthSameResonanceType" xml:space="preserve"><value>Choose two peaks or two dips, not one of each.</value></data>
+  <data name="CableLengthAdjacentResonances" xml:space="preserve"><value>Choose adjacent peaks or adjacent dips; another resonance of the same type lies between these markers.</value></data>
+  <data name="CableLengthPickResonanceMarkers" xml:space="preserve"><value>Set two different resonance markers on the Antenna plot to calculate an estimate.</value></data>
+  <data name="CableLengthReturnToPlot" xml:space="preserve"><value>Return to Antenna plot</value></data>
+  <data name="ResonanceQTitle" xml:space="preserve"><value>Manual resonance Q</value></data>
+  <data name="ResonanceQHint" xml:space="preserve"><value>Use a resonance frequency and lower/upper bandwidth edges. For the documented parallel resonance method, set the edge frequencies where phase reaches +45° and −45° around resonance. Q = Fres / (Fh − Fl).</value></data>
+  <data name="ResonanceFrequencyLabel" xml:space="preserve"><value>RESONANCE · MHz</value></data>
+  <data name="LowerEdgeLabel" xml:space="preserve"><value>LOWER EDGE Fl · MHz</value></data>
+  <data name="UpperEdgeLabel" xml:space="preserve"><value>UPPER EDGE Fh · MHz</value></data>
+  <data name="ResonanceQValue" xml:space="preserve"><value>Q = {0}</value></data>
+  <data name="ResonanceQEnterFrequencies" xml:space="preserve"><value>Enter resonance and both bandwidth edge frequencies in the profile range.</value></data>
+  <data name="GeneratorTitle" xml:space="preserve"><value>Generator frequency settings</value></data>
+  <data name="GeneratorHint" xml:space="preserve"><value>The ten frequency memories come from the supplied analyz.ini. Select a memory or enter a frequency within the device profile.</value></data>
+  <data name="GeneratorMemory" xml:space="preserve"><value>FREQUENCY MEMORY</value></data>
+  <data name="GeneratorFrequency" xml:space="preserve"><value>OUTPUT FREQUENCY · MHz</value></data>
+  <data name="GeneratorOutputOn" xml:space="preserve"><value>Generator output control unavailable</value></data>
+  <data name="GeneratorOutputBlocked" xml:space="preserve"><value>No generator command is sent by VNA Studio. The physical output state is unknown.</value></data>
+  <data name="BandGroups" xml:space="preserve"><value>AMATEUR BAND SWEEP PRESETS</value></data>
+  <data name="BandHf" xml:space="preserve"><value>HF</value></data>
+  <data name="BandVhf" xml:space="preserve"><value>VHF</value></data>
+  <data name="AmateurBandPresetHint" xml:space="preserve"><value>A preset sets the scan start/stop only; it does not change the device range or authorize transmission.</value></data>
+  <data name="BandOutsideProfile" xml:space="preserve"><value>No VHF amateur band preset fits this profile's {0} MHz maximum.</value></data>
+  <data name="ModeXtalUnavailable" xml:space="preserve"><value>Crystal analysis needs verified filter or reflection measurements.</value></data>
+  <data name="ModeFilterUnavailable" xml:space="preserve"><value>Filter mode needs verified transmission data and its calibration.</value></data>
+  <data name="ModeGeneratorUnavailable" xml:space="preserve"><value>Generator output is disabled until device support is verified.</value></data>
+  <data name="Bandwidth" xml:space="preserve"><value>Bandwidth</value></data>
+  <data name="ProfileRange" xml:space="preserve"><value>Profile range</value></data>
+  <data name="SaveRange" xml:space="preserve"><value>Save range</value></data>
+  <data name="RecallRange" xml:space="preserve"><value>Recall range</value></data>
+  <data name="Show50OhmReference" xml:space="preserve"><value>50 ohm reference</value></data>
+  <data name="ReturnLossX2" xml:space="preserve"><value>RL ×2 range (0–60 dB)</value></data>
+  <data name="ShowFullMarkerValues" xml:space="preserve"><value>Full marker values</value></data>
+  <data name="ReturnLossOffsetLabel" xml:space="preserve"><value>RL offset (dB)</value></data>
+  <data name="ReturnLossOffsetInvalid" xml:space="preserve"><value>Enter a finite value from −300 to 300 dB.</value></data>
+  <data name="ExportCsv" xml:space="preserve"><value>Export CSV</value></data>
+  <data name="ExportCsvTitle" xml:space="preserve"><value>Export measurement CSV</value></data>
+  <data name="CsvFileType" xml:space="preserve"><value>CSV measurement</value></data>
+  <data name="CsvSaved" xml:space="preserve"><value>CSV exported: {0}</value></data>  <data name="FileMenu" xml:space="preserve"><value>FILES</value></data>
+  <data name="About" xml:space="preserve"><value>About</value></data>
+  <data name="AboutTitle" xml:space="preserve"><value>About VNA Studio</value></data>
+  <data name="AboutProduct" xml:space="preserve"><value>VNA Studio · SQ7MRU</value></data>
+  <data name="AboutVersionFormat" xml:space="preserve"><value>Version {0}</value></data>
+  <data name="AboutProtocolNote" xml:space="preserve"><value>Device communication is not enabled until the hardware protocol has been verified.</value></data>
+  <data name="Close" xml:space="preserve"><value>Close</value></data>  <data name="MenuFile" xml:space="preserve"><value>File</value></data>
+  <data name="MenuHelp" xml:space="preserve"><value>Help</value></data>
+  <data name="NoSessionFile" xml:space="preserve"><value>No session file</value></data>
+  <data name="UnsavedResult" xml:space="preserve"><value>Unsaved measurement</value></data>
+  <data name="ShowXcXl" xml:space="preserve"><value>Show Xc/Xl</value></data>
+  <data name="MarkerQEstimate" xml:space="preserve"><value>Marker Q estimate</value></data>
+  <data name="MarkerQHint" xml:space="preserve"><value>Rounded midpoint frequency divided by marker bandwidth; this is not calibrated resonance Q.</value></data>
+  <data name="ScanProgressFormat" xml:space="preserve"><value>Points {0}/{1} · last complete scan {2}</value></data>
+  <data name="SessionAnalysisModeInvalid" xml:space="preserve"><value>The session analysis mode is not supported.</value></data>
+</root>
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <AssemblyName>Vna.App</AssemblyName>
+    <AssemblyTitle>VNA Studio</AssemblyTitle>
+    <Product>VNA Studio</Product>
+    <RootNamespace>Vna.App</RootNamespace>
+    <AvaloniaUseCompiledBindingsByDefault>false</AvaloniaUseCompiledBindingsByDefault>
+    <!-- Views load compiled XAML explicitly and resolve named controls with FindControl. -->
+    <AvaloniaNameGeneratorIsEnabled>false</AvaloniaNameGeneratorIsEnabled>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="12.1.4" />
+    <PackageReference Include="Avalonia.Desktop" Version="12.1.4" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.4" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="12.1.4" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Ini" Version="10.0.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Vna.Core\Vna.Core.csproj" />
+    <ProjectReference Include="..\Vna.Localization\Vna.Localization.csproj" />
+    <ProjectReference Include="..\Vna.Devices\Vna.Devices.csproj" />
+    <ProjectReference Include="..\Vna.IO\Vna.IO.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Update="Assets\analyser306b-65mhz.ini" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

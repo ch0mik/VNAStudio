@@ -1,0 +1,66 @@
+{
+  "FormatVersion": 2,
+  "ProfileId": "iw3hev-65mhz",
+  "DataSource": "Demonstration example",
+  "CapturedAtUtc": "2026-11-04T00:00:00+00:00",
+  "Sweep": {
+    "StartFrequencyHz": 1000000,
+    "StopFrequencyHz": 65000000,
+    "PointCount": 2
+  },
+  "Points": [
+    {
+      "FrequencyHz": 1000000,
+      "Swr": 1.25,
+      "ReturnLossDb": -19.084850188786497,
+      "PhaseDegrees": 0.0,
+      "ImpedanceOhms": 62.5,
+      "ResistanceOhms": 62.5,
+      "ReactanceOhms": 0.0,
+      "Quality": "Valid"
+    },
+    {
+      "FrequencyHz": 65000000,
+      "Swr": 2.0,
+      "ReturnLossDb": -9.542425094393248,
+      "PhaseDegrees": -45.0,
+      "ImpedanceOhms": 78.6418273207142,
+      "ResistanceOhms": 69.4762960347282,
+      "ReactanceOhms": -36.8453700434103,
+      "Quality": "Valid"
+    }
+  ],
+  "ProfileSnapshot": {
+    "Id": "iw3hev-65mhz",
+    "DisplayName": "VNA 1-65 MHz",
+    "MinimumFrequencyHz": 1000000,
+    "MaximumFrequencyHz": 65000000,
+    "DefaultPointCount": 649,
+    "DdsClockHz": 191993220,
+    "ReferenceImpedanceOhms": 50.0,
+    "MagnitudeAdcDbPerCount": 0.058651026,
+    "PhaseAdcDegreesPerCount": 0.175953079,
+    "DdsPllPrescaler": 1,
+    "StartPauseMilliseconds": 10,
+    "StepPauseMilliseconds": 0,
+    "LegacyCalibration": {
+      "ReturnLossOffsetVnaDb": 0.0,
+      "ReturnLossOffsetFilterDb": 15.5,
+      "ReturnLossA": 1.0,
+      "ReturnLossB": 0.0,
+      "PhaseA": 1.0,
+      "PhaseB": 0.0,
+      "InputVelocityFactor": 0.66
+    },
+    "PlotColors": {
+      "Phase": 165335,
+      "ReturnLoss": 16711680,
+      "Reactance": 32768,
+      "Resistance": 65305,
+      "Impedance": 16521960,
+      "Swr": 255,
+      "Background": 15790320
+    }
+  },
+  "AnalysisMode": "Antenna"
+}

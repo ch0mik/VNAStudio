@@ -1,0 +1,49 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="Vna.App.App"
+             RequestedThemeVariant="Dark">
+  <Application.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.MergedDictionaries>
+        <ResourceInclude Source="/Themes/ThemeResources.axaml" />
+      </ResourceDictionary.MergedDictionaries>
+    </ResourceDictionary>
+  </Application.Resources>
+  <Application.Styles>
+    <FluentTheme />
+    <Style Selector="Button">
+      <Setter Property="CornerRadius" Value="8" />
+      <Setter Property="Padding" Value="14,9" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+    <Style Selector="Button.Primary">
+      <Setter Property="Background" Value="{DynamicResource Vna.Accent}" />
+      <Setter Property="Foreground" Value="{DynamicResource Vna.OnAccent}" />
+      <Setter Property="BorderThickness" Value="0" />
+    </Style>
+    <Style Selector="Button.Secondary">
+      <Setter Property="Background" Value="{DynamicResource Vna.SecondaryBackground}" />
+      <Setter Property="Foreground" Value="{DynamicResource Vna.SecondaryForeground}" />
+      <Setter Property="BorderThickness" Value="0" />
+    </Style>
+    <Style Selector="Button.Ghost.active">
+      <Setter Property="Background" Value="{DynamicResource Vna.SecondaryBackground}" />
+      <Setter Property="Foreground" Value="{DynamicResource Vna.SecondaryForeground}" />
+    </Style>
+    <Style Selector="Button.Ghost">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="Foreground" Value="{DynamicResource Vna.TextSecondary}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource Vna.ControlBorder}" />
+      <Setter Property="BorderThickness" Value="1" />
+    </Style>
+    <Style Selector="TextBox">
+      <Setter Property="CornerRadius" Value="7" />
+      <Setter Property="Padding" Value="10,8" />
+      <Setter Property="BorderBrush" Value="{DynamicResource Vna.ControlBorder}" />
+    </Style>
+    <Style Selector="ComboBox">
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+    </Style>
+  </Application.Styles>
+</Application>
+

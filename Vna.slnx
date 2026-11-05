@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Vna.Localization/Vna.Localization.csproj" />
+    <Project Path="src/Vna.Core/Vna.Core.csproj" />
+    <Project Path="src/Vna.Devices/Vna.Devices.csproj" />
+    <Project Path="src/Vna.IO/Vna.IO.csproj" />
+    <Project Path="src/Vna.App/Vna.App.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Vna.Tests/Vna.Tests.csproj" />
+  </Folder>
+</Solution>

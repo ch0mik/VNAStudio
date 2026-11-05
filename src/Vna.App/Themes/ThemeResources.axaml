@@ -1,0 +1,78 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:themes="using:Vna.App.Theming">
+  <ResourceDictionary.ThemeDictionaries>
+    <ResourceDictionary x:Key="Light">
+      <SolidColorBrush x:Key="Vna.WindowBackground" Color="#F4F6FA" />
+      <SolidColorBrush x:Key="Vna.Surface" Color="#FFFFFF" />
+      <SolidColorBrush x:Key="Vna.Border" Color="#E1E6EE" />
+      <SolidColorBrush x:Key="Vna.TextPrimary" Color="#17243A" />
+      <SolidColorBrush x:Key="Vna.TextSecondary" Color="#526078" />
+      <SolidColorBrush x:Key="Vna.TextMuted" Color="#758196" />
+      <SolidColorBrush x:Key="Vna.Accent" Color="#185ADB" />
+      <SolidColorBrush x:Key="Vna.OnAccent" Color="#FFFFFF" />
+      <SolidColorBrush x:Key="Vna.SecondaryBackground" Color="#E9EEF8" />
+      <SolidColorBrush x:Key="Vna.SecondaryForeground" Color="#19366E" />
+      <SolidColorBrush x:Key="Vna.ControlBackground" Color="#FFFFFF" />
+      <SolidColorBrush x:Key="Vna.ControlBorder" Color="#D9E0EA" />
+      <SolidColorBrush x:Key="Vna.BadgeBackground" Color="#FFF4DC" />
+      <SolidColorBrush x:Key="Vna.BadgeBorder" Color="#F3D49B" />
+      <SolidColorBrush x:Key="Vna.BadgeForeground" Color="#82560F" />
+      <SolidColorBrush x:Key="Vna.BadgeIndicator" Color="#D9921D" />
+      <SolidColorBrush x:Key="Vna.ErrorBackground" Color="#FCEBED" />
+      <SolidColorBrush x:Key="Vna.ErrorForeground" Color="#9A2638" />
+      <SolidColorBrush x:Key="Vna.Marker1" Color="#C82F46" />
+      <SolidColorBrush x:Key="Vna.Marker2" Color="#1753C8" />
+      <SolidColorBrush x:Key="Vna.Divider" Color="#E9EDF3" />
+    </ResourceDictionary>
+    <ResourceDictionary x:Key="Dark">
+      <SolidColorBrush x:Key="Vna.WindowBackground" Color="#0D1117" />
+      <SolidColorBrush x:Key="Vna.Surface" Color="#161D27" />
+      <SolidColorBrush x:Key="Vna.Border" Color="#303B4B" />
+      <SolidColorBrush x:Key="Vna.TextPrimary" Color="#E3E9F2" />
+      <SolidColorBrush x:Key="Vna.TextSecondary" Color="#B4C0D0" />
+      <SolidColorBrush x:Key="Vna.TextMuted" Color="#94A2B6" />
+      <SolidColorBrush x:Key="Vna.Accent" Color="#477FE8" />
+      <SolidColorBrush x:Key="Vna.OnAccent" Color="#FFFFFF" />
+      <SolidColorBrush x:Key="Vna.SecondaryBackground" Color="#26344B" />
+      <SolidColorBrush x:Key="Vna.SecondaryForeground" Color="#CADAF9" />
+      <SolidColorBrush x:Key="Vna.ControlBackground" Color="#101722" />
+      <SolidColorBrush x:Key="Vna.ControlBorder" Color="#46546A" />
+      <SolidColorBrush x:Key="Vna.BadgeBackground" Color="#332B19" />
+      <SolidColorBrush x:Key="Vna.BadgeBorder" Color="#775E27" />
+      <SolidColorBrush x:Key="Vna.BadgeForeground" Color="#EAC77B" />
+      <SolidColorBrush x:Key="Vna.BadgeIndicator" Color="#DCA441" />
+      <SolidColorBrush x:Key="Vna.ErrorBackground" Color="#371C25" />
+      <SolidColorBrush x:Key="Vna.ErrorForeground" Color="#F197A5" />
+      <SolidColorBrush x:Key="Vna.Marker1" Color="#FF8192" />
+      <SolidColorBrush x:Key="Vna.Marker2" Color="#89B7FF" />
+      <SolidColorBrush x:Key="Vna.Divider" Color="#303B4B" />
+    </ResourceDictionary>
+    <ResourceDictionary x:Key="{x:Static themes:AppThemes.NightVision}">
+      <ResourceDictionary.MergedDictionaries>
+        <ResourceInclude Source="/Themes/NightControlResources.axaml" />
+      </ResourceDictionary.MergedDictionaries>
+      <SolidColorBrush x:Key="Vna.WindowBackground" Color="#030000" />
+      <SolidColorBrush x:Key="Vna.Surface" Color="#090000" />
+      <SolidColorBrush x:Key="Vna.Border" Color="#400000" />
+      <SolidColorBrush x:Key="Vna.TextPrimary" Color="#CC0000" />
+      <SolidColorBrush x:Key="Vna.TextSecondary" Color="#A00000" />
+      <SolidColorBrush x:Key="Vna.TextMuted" Color="#800000" />
+      <SolidColorBrush x:Key="Vna.Accent" Color="#580000" />
+      <SolidColorBrush x:Key="Vna.OnAccent" Color="#E00000" />
+      <SolidColorBrush x:Key="Vna.SecondaryBackground" Color="#250000" />
+      <SolidColorBrush x:Key="Vna.SecondaryForeground" Color="#BE0000" />
+      <SolidColorBrush x:Key="Vna.ControlBackground" Color="#0B0000" />
+      <SolidColorBrush x:Key="Vna.ControlBorder" Color="#520000" />
+      <SolidColorBrush x:Key="Vna.BadgeBackground" Color="#1A0000" />
+      <SolidColorBrush x:Key="Vna.BadgeBorder" Color="#500000" />
+      <SolidColorBrush x:Key="Vna.BadgeForeground" Color="#BA0000" />
+      <SolidColorBrush x:Key="Vna.BadgeIndicator" Color="#A40000" />
+      <SolidColorBrush x:Key="Vna.ErrorBackground" Color="#240000" />
+      <SolidColorBrush x:Key="Vna.ErrorForeground" Color="#DC0000" />
+      <SolidColorBrush x:Key="Vna.Marker1" Color="#D00000" />
+      <SolidColorBrush x:Key="Vna.Marker2" Color="#980000" />
+      <SolidColorBrush x:Key="Vna.Divider" Color="#300000" />
+    </ResourceDictionary>
+  </ResourceDictionary.ThemeDictionaries>
+</ResourceDictionary>

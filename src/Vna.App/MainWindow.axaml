@@ -1,0 +1,440 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:plot="using:Vna.App.Plotting"
+        xmlns:loc="clr-namespace:Vna.Localization;assembly=Vna.Localization"
+        x:Class="Vna.App.MainWindow"
+        Title="{Binding [WindowTitle], Source={x:Static loc:LocalizationService.Instance}}" Width="1440" Height="900" MinWidth="1024" MinHeight="768" FontSize="10" CanResize="True"
+        Background="{DynamicResource Vna.WindowBackground}" Foreground="{DynamicResource Vna.TextPrimary}"
+        RequestedThemeVariant="{Binding ThemeVariant}">
+  <Grid RowDefinitions="Auto,*">
+    <Border Grid.Row="0" Background="{DynamicResource Vna.Surface}" BorderBrush="{DynamicResource Vna.Border}" BorderThickness="0,0,0,1" Padding="24,15">
+      <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="18">
+        <StackPanel Orientation="Horizontal" Spacing="13" VerticalAlignment="Center">
+          <Border Width="38" Height="38" CornerRadius="11" Background="{DynamicResource Vna.Accent}">
+            <TextBlock Text="∿" Foreground="{DynamicResource Vna.OnAccent}" FontSize="20" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" />
+          </Border>
+          <StackPanel Spacing="2">
+            <TextBlock Text="{Binding [AppName], Source={x:Static loc:LocalizationService.Instance}}" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource Vna.TextPrimary}" />
+            <TextBlock Text="{Binding [Tagline], Source={x:Static loc:LocalizationService.Instance}}" FontSize="8" FontWeight="SemiBold" Foreground="{DynamicResource Vna.TextMuted}" LetterSpacing="1.4" />
+          </StackPanel>
+        </StackPanel>
+        <Menu Grid.Column="1" VerticalAlignment="Center">
+          <MenuItem Header="{Binding [MenuFile], Source={x:Static loc:LocalizationService.Instance}}">
+            <MenuItem Header="{Binding [OpenSession], Source={x:Static loc:LocalizationService.Instance}}" Click="OpenSession_OnClick" />
+            <MenuItem Header="{Binding [OpenCsv], Source={x:Static loc:LocalizationService.Instance}}" Click="OpenCsv_OnClick" />
+            <MenuItem Header="{Binding [SaveSession], Source={x:Static loc:LocalizationService.Instance}}" Click="SaveSession_OnClick" IsEnabled="{Binding CanSaveSession}" />
+            <MenuItem Header="{Binding [ExportCsv], Source={x:Static loc:LocalizationService.Instance}}" Click="ExportCsv_OnClick" IsEnabled="{Binding CanSaveSession}" />
+          </MenuItem>
+          <MenuItem Header="{Binding [MenuHelp], Source={x:Static loc:LocalizationService.Instance}}">
+            <MenuItem Header="{Binding [About], Source={x:Static loc:LocalizationService.Instance}}" Click="About_OnClick" />
+          </MenuItem>
+        </Menu>        <Border Grid.Column="2" Background="{DynamicResource Vna.BadgeBackground}" BorderBrush="{DynamicResource Vna.BadgeBorder}" BorderThickness="1" CornerRadius="8" Padding="12,8" VerticalAlignment="Center">
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <Ellipse Width="8" Height="8" Fill="{DynamicResource Vna.BadgeIndicator}" VerticalAlignment="Center" />
+            <TextBlock Text="{Binding DataSourceDisplay}" Foreground="{DynamicResource Vna.BadgeForeground}" FontSize="9" FontWeight="Bold" VerticalAlignment="Center" />
+          </StackPanel>
+        </Border>
+        <TextBlock x:Name="OperatorCallsign" Grid.Column="3" Text="SQ7MRU" Foreground="{DynamicResource Vna.TextPrimary}" FontSize="12" FontWeight="SemiBold" LetterSpacing="1" VerticalAlignment="Center" HorizontalAlignment="Right" />
+      </Grid>
+    </Border>
+
+    <Grid Grid.Row="1" ColumnDefinitions="350,*" Margin="20" ColumnSpacing="18">
+      <Border x:Name="SettingsPanel" Grid.Column="0" Background="{DynamicResource Vna.Surface}" BorderBrush="{DynamicResource Vna.Border}" BorderThickness="1" CornerRadius="12" Padding="18">
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+          <StackPanel Spacing="10" Margin="0,0,14,0">
+            <StackPanel Spacing="4">
+              <TextBlock Text="{Binding [ScanSettings], Source={x:Static loc:LocalizationService.Instance}}" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource Vna.TextPrimary}" />
+              <TextBlock Text="{Binding [DeviceProfileLabel], Source={x:Static loc:LocalizationService.Instance}}" FontSize="8" Foreground="{DynamicResource Vna.TextMuted}" />
+              <TextBlock Text="{Binding ProfileLabel}" FontSize="9" Foreground="{DynamicResource Vna.TextSecondary}" TextWrapping="Wrap" />
+            </StackPanel>
+            <StackPanel Spacing="6">
+              <TextBlock Text="{Binding [LanguageLabel], Source={x:Static loc:LocalizationService.Instance}}" FontSize="8" FontWeight="SemiBold" Foreground="{DynamicResource Vna.TextMuted}" />
+              <ComboBox x:Name="LanguageSelector" ItemsSource="{Binding Languages}" SelectedItem="{Binding SelectedLanguage, Mode=TwoWay}" />
+              <TextBlock Text="{Binding [LanguageHint], Source={x:Static loc:LocalizationService.Instance}}" FontSize="8" Foreground="{DynamicResource Vna.TextMuted}" TextWrapping="Wrap" />
+            </StackPanel>
+            <StackPanel Spacing="6">
+              <TextBlock Text="{Binding [ThemeLabel], Source={x:Static loc:LocalizationService.Instance}}" FontSize="8" FontWeight="SemiBold" Foreground="{DynamicResource Vna.TextMuted}" />
+              <ComboBox x:Name="ThemeSelector" ItemsSource="{Binding Themes}" SelectedItem="{Binding SelectedTheme, Mode=TwoWay}">
+                <ComboBox.ItemTemplate>
+                  <DataTemplate><TextBlock Text="{Binding DisplayName}" /></DataTemplate>
+                </ComboBox.ItemTemplate>
+              </ComboBox>
+              <TextBlock Text="{Binding [ThemeHint], Source={x:Static loc:LocalizationService.Instance}}" FontSize="8" Foreground="{DynamicResource Vna.TextMuted}" TextWrapping="Wrap" />
+              <TextBlock Text="{Binding [NightVisionHint], Source={x:Static loc:LocalizationService.Instance}}" IsVisible="{Binding IsNightVision}" FontSize="8" Foreground="{DynamicResource Vna.TextSecondary}" TextWrapping="Wrap" />
+            </StackPanel>
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBlock Text="{Binding [FrequencyRange], Source={x:Static loc:LocalizationService.Instance}}" FontSize="9" Foreground="{DynamicResource Vna.TextMuted}" VerticalAlignment="Center" />
+              <CheckBox Grid.Column="1" Content="{Binding [Hold], Source={x:Static loc:LocalizationService.Instance}}" IsChecked="{Binding IsHold}" Command="{Binding HoldCommand}" />
+            </Grid>
+            <Grid ColumnDefinitions="*,Auto,*" RowDefinitions="Auto,Auto" ColumnSpacing="8" RowSpacing="6">
+              <TextBlock Text="{Binding [StartFrequency], Source={x:Static loc:LocalizationService.Instance}}" FontSize="8" FontWeight="SemiBold" Foreground="{DynamicResource Vna.TextMuted}" />
+              <TextBlock Grid.Column="2" Text="{Binding [StopFrequency], Source={x:Static loc:LocalizationService.Instance}}" FontSize="8" FontWeight="SemiBold" Foreground="{DynamicResource Vna.TextMuted}" />
+              <TextBox Grid.Row="1" Text="{Binding StartMHz}" />
+              <TextBlock Grid.Row="1" Grid.Column="1" Text="—" Foreground="{DynamicResource Vna.TextMuted}" VerticalAlignment="Center" />
+              <TextBox Grid.Row="1" Grid.Column="2" Text="{Binding StopMHz}" />
+            </Grid>
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <Button Classes="Ghost" Content="{Binding [FullSweepRange], Source={x:Static loc:LocalizationService.Instance}}" Command="{Binding SetFullSweepRangeCommand}" />
+              <Button Classes="Ghost" Content="{Binding [SweepRangeFromMarkers], Source={x:Static loc:LocalizationService.Instance}}" Command="{Binding SetSweepRangeToMarkersCommand}" IsEnabled="{Binding CanSetSweepRangeToMarkers}" />
+            </StackPanel>
+            <StackPanel Spacing="6" IsVisible="{Binding IsAntennaMode}">
+              <TextBlock Text="{Binding [BandGroups], Source={x:Static loc:LocalizationService.Instance}}" FontSize="8" FontWeight="SemiBold" Foreground="{DynamicResource Vna.TextMuted}" />
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <Button Classes="Ghost" Content="{Binding [BandHf], Source={x:Static loc:LocalizationService.Instance}}" Command="{Binding SelectHfBandsCommand}" />
+                <Button Classes="Ghost" Content="{Binding [BandVhf], Source={x:Static loc:LocalizationService.Instance}}" Command="{Binding SelectVhfBandsCommand}" />
+              </StackPanel>
+              <ComboBox ItemsSource="{Binding VisibleAmateurBands}" SelectedItem="{Binding SelectedBandPreset, Mode=TwoWay}">
+                <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Name}" /></DataTemplate></ComboBox.ItemTemplate>
+              </ComboBox>
+              <TextBlock Text="{Binding BandGroupHint}" FontSize="8" Foreground="{DynamicResource Vna.TextMuted}" TextWrapping="Wrap" />
+            </StackPanel>
+            <StackPanel Spacing="6">
+              <TextBlock Text="{Binding [MeasurementSource], Source={x:Static loc:LocalizationService.Instance}}" FontSize="8" FontWeight="SemiBold" Foreground="{DynamicResource Vna.TextMuted}" />
+              <ComboBox ItemsSource="{Binding MeasurementSources}" SelectedItem="{Binding SelectedMeasurementSource, Mode=TwoWay}" IsEnabled="{Binding CanSelectMeasurementSource}">
+                <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding DisplayName}" /></DataTemplate></ComboBox.ItemTemplate>
+              </ComboBox>
+              <TextBlock Text="{Binding MeasurementSourceHint}" FontSize="8" Foreground="{DynamicResource Vna.TextMuted}" TextWrapping="Wrap" />
+            </StackPanel>
+            <StackPanel Spacing="6" IsVisible="{Binding IsHardwareSource}">
+              <TextBlock Text="{Binding [SerialPortLabel], Source={x:Static loc:LocalizationService.Instance}}" FontSize="8" FontWeight="SemiBold" Foreground="{DynamicResource Vna.TextMuted}" TextWrapping="Wrap" />
+              <TextBox Text="{Binding PortName}" PlaceholderText="{Binding [SerialPortPlaceholder], Source={x:Static loc:LocalizationService.Instance}}" IsEnabled="{Binding CanChangePort}" />
+              <TextBlock Text="{Binding [SerialPortHint], Source={x:Static loc:LocalizationService.Instance}}" FontSize="8" Foreground="{DynamicResource Vna.TextMuted}" TextWrapping="Wrap" />
+              <Button Classes="Ghost" Content="{Binding [DetectPorts], Source={x:Static loc:LocalizationService.Instance}}" Click="RefreshPorts_OnClick" IsEnabled="{Binding CanRefreshPorts}" HorizontalContentAlignment="Center" />
+              <ComboBox ItemsSource="{Binding AvailablePortNames}" SelectedItem="{Binding SelectedDiscoveredPort}" />
+              <TextBlock Text="{Binding [PortListHint], Source={x:Static loc:LocalizationService.Instance}}" FontSize="8" Foreground="{DynamicResource Vna.TextMuted}" TextWrapping="Wrap" />
+              <Button Classes="Ghost" Content="{Binding [SaveSettings], Source={x:Static loc:LocalizationService.Instance}}" Click="SaveConfiguration_OnClick" HorizontalContentAlignment="Center" />
+              <TextBlock Text="{Binding ConfigurationPath}" FontSize="7" Foreground="{DynamicResource Vna.TextMuted}" TextWrapping="Wrap" />
+            </StackPanel>
+            <StackPanel Spacing="6" IsVisible="{Binding IsDeviceSourceConnectable}">
+              <Button Classes="Secondary" Content="{Binding [ConnectDevice], Source={x:Static loc:LocalizationService.Instance}}" Command="{Binding ConnectDeviceCommand}" IsEnabled="{Binding CanConnectDevice}" HorizontalContentAlignment="Center" />
+              <Button Classes="Ghost" Content="{Binding [DisconnectDevice], Source={x:Static loc:LocalizationService.Instance}}" Command="{Binding DisconnectDeviceCommand}" IsEnabled="{Binding CanDisconnectDevice}" HorizontalContentAlignment="Center" />
+            </StackPanel>
+            <StackPanel Spacing="6">
+              <TextBlock Text="{Binding [PointCount], Source={x:Static loc:LocalizationService.Instance}}" FontSize="8" FontWeight="SemiBold" Foreground="{DynamicResource Vna.TextMuted}" />
+              <TextBox Text="{Binding PointCount}" />
+            </StackPanel>
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="6">
+              <Button x:Name="StartScanButton" Classes="Primary" Content="{Binding [StartScan], Source={x:Static loc:LocalizationService.Instance}}" Command="{Binding StartCommand}" HorizontalContentAlignment="Center" />
+              <Button Grid.Column="1" Classes="Secondary" Content="{Binding [StopScan], Source={x:Static loc:LocalizationService.Instance}}" Command="{Binding StopCommand}" HorizontalContentAlignment="Center" />
+            </Grid>
+            <TextBlock Text="{Binding ContinuousScanHint}" FontSize="8" Foreground="{DynamicResource Vna.TextMuted}" TextWrapping="Wrap" />
+            <ProgressBar Minimum="0" Maximum="{Binding ScanProgressMaximum}" Value="{Binding ScanProgressValue}" Height="5" IsVisible="{Binding IsScanning}" />
+            <TextBlock Text="{Binding ScanProgressDisplay}" FontSize="8" Foreground="{DynamicResource Vna.TextMuted}" />
+            <Button Classes="Ghost" Content="{Binding [OpenSession], Source={x:Static loc:LocalizationService.Instance}}" Click="OpenSession_OnClick" IsEnabled="{Binding CanLoadSession}" HorizontalContentAlignment="Center" />
+            <Button Classes="Ghost" Content="{Binding [SaveSession], Source={x:Static loc:LocalizationService.Instance}}" Click="SaveSession_OnClick" IsEnabled="{Binding CanSaveSession}" HorizontalContentAlignment="Center" />
+            <Button Classes="Ghost" Content="{Binding [ExportCsv], Source={x:Static loc:LocalizationService.Instance}}" Click="ExportCsv_OnClick" IsEnabled="{Binding CanSaveSession}" HorizontalContentAlignment="Center" />
+            <Button Classes="Ghost" Content="{Binding [About], Source={x:Static loc:LocalizationService.Instance}}" Click="About_OnClick" HorizontalContentAlignment="Center" />
+            <Border Height="1" Background="{DynamicResource Vna.Divider}" Margin="0,2" />
+            <StackPanel Spacing="8" IsVisible="{Binding IsAntennaMode}">
+              <TextBlock Text="{Binding [Traces], Source={x:Static loc:LocalizationService.Instance}}" FontSize="8" FontWeight="Bold" Foreground="{DynamicResource Vna.TextMuted}" LetterSpacing="1" />
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <Button Classes="Ghost" Padding="6,3" Content="{Binding [TraceAll], Source={x:Static loc:LocalizationService.Instance}}" Command="{Binding ShowAllTracesCommand}" />
+                <Button Classes="Ghost" Padding="6,3" Content="{Binding [TraceNone], Source={x:Static loc:LocalizationService.Instance}}" Command="{Binding HideAllTracesCommand}" />
+              </StackPanel>
+              <ItemsControl ItemsSource="{Binding Traces}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="5" Margin="0,2">
+                      <CheckBox IsChecked="{Binding IsVisible}" FontSize="10" VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                          <Line Width="24" Height="10" StartPoint="0,5" EndPoint="24,5" StrokeThickness="2" Stroke="{Binding Brush}" StrokeDashArray="{Binding DashPattern}" VerticalAlignment="Center" />
+                          <TextBlock Text="{Binding DisplayName}" />
+                        </StackPanel>
+                      </CheckBox>
+                      <ComboBox Grid.Column="1" Width="78" FontSize="8" ItemsSource="{Binding ColorChoices}"
+                                SelectedItem="{Binding SelectedColor, Mode=TwoWay}" IsEnabled="{Binding IsColorEditingEnabled}" />
+                      <Button Grid.Column="2" Classes="Ghost" Padding="5,2" Content="{Binding [Reset], Source={x:Static loc:LocalizationService.Instance}}"
+                              Command="{Binding ResetColorCommand}" IsEnabled="{Binding IsColorEditingEnabled}" />
+                    </Grid>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+            <Border Height="1" Background="{DynamicResource Vna.Divider}" Margin="0,2" />
+            <StackPanel Spacing="5" IsVisible="{Binding IsAntennaMode}">
+              <TextBlock Text="{Binding [Markers], Source={x:Static loc:LocalizationService.Instance}}" FontSize="8" FontWeight="Bold" Foreground="{DynamicResource Vna.TextMuted}" LetterSpacing="1" />
+              <TextBlock Text="{Binding [MarkerHint], Source={x:Static loc:LocalizationService.Instance}}" FontSize="9" Foreground="{DynamicResource Vna.TextSecondary}" TextWrapping="Wrap" />
+              <StackPanel Orientation="Horizontal" Spacing="12">
+                <CheckBox IsChecked="{Binding IsMarker1Visible}" Content="M1" Foreground="{DynamicResource Vna.Marker1}" />
+                <Button Classes="Ghost" Padding="5,2" Content="‹" ToolTip.Tip="{Binding [MarkerPrevious], Source={x:Static loc:LocalizationService.Instance}}" Command="{Binding MoveMarker1PreviousCommand}" />
+                <Button Classes="Ghost" Padding="5,2" Content="›" ToolTip.Tip="{Binding [MarkerNext], Source={x:Static loc:LocalizationService.Instance}}" Command="{Binding MoveMarker1NextCommand}" />
+                <CheckBox IsChecked="{Binding IsMarker2Visible}" Content="M2" Foreground="{DynamicResource Vna.Marker2}" />
+                <Button Classes="Ghost" Padding="5,2" Content="‹" ToolTip.Tip="{Binding [MarkerPrevious], Source={x:Static loc:LocalizationService.Instance}}" Command="{Binding MoveMarker2PreviousCommand}" />
+                <Button Classes="Ghost" Padding="5,2" Content="›" ToolTip.Tip="{Binding [MarkerNext], Source={x:Static loc:LocalizationService.Instance}}" Command="{Binding MoveMarker2NextCommand}" />
+              </StackPanel>
+              <CheckBox IsChecked="{Binding IsMinimumSwrVisible}" Content="{Binding [ShowMinimumSwr], Source={x:Static loc:LocalizationService.Instance}}" />
+              <CheckBox IsChecked="{Binding Show50OhmReference}" Content="{Binding [Show50OhmReference], Source={x:Static loc:LocalizationService.Instance}}" />
+              <CheckBox IsChecked="{Binding ReturnLossX2}" Content="{Binding [ReturnLossX2], Source={x:Static loc:LocalizationService.Instance}}" />
+              <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8" VerticalAlignment="Center">
+                <TextBlock Text="{Binding [ReturnLossOffsetLabel], Source={x:Static loc:LocalizationService.Instance}}" FontSize="8" Foreground="{DynamicResource Vna.TextMuted}" VerticalAlignment="Center" />
+                <TextBox Grid.Column="1" Width="84" HorizontalAlignment="Left" Text="{Binding ReturnLossDisplayOffsetText, Mode=TwoWay}" />
+              </Grid>
+              <TextBlock Text="{Binding [ReturnLossOffsetInvalid], Source={x:Static loc:LocalizationService.Instance}}" IsVisible="{Binding IsReturnLossDisplayOffsetInvalid}" FontSize="8" Foreground="{DynamicResource Vna.ErrorForeground}" TextWrapping="Wrap" />
+              <CheckBox IsChecked="{Binding ShowFullMarkerValues}" Content="{Binding [ShowFullMarkerValues], Source={x:Static loc:LocalizationService.Instance}}" />
+              <CheckBox IsChecked="{Binding ShowXcXl}" Content="{Binding [ShowXcXl], Source={x:Static loc:LocalizationService.Instance}}" />
+              <Button Classes="Ghost" Content="{Binding [SetMarker1Minimum], Source={x:Static loc:LocalizationService.Instance}}" Command="{Binding SetMarker1ToMinimumSwrCommand}" HorizontalContentAlignment="Center" />
+              <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto" ColumnSpacing="10" RowSpacing="3">
+                <TextBlock Text="M1" FontSize="9" FontWeight="Bold" Foreground="{DynamicResource Vna.Marker1}" />
+                <TextBlock Grid.Column="1" Text="{Binding Marker1Text}" FontSize="9" Foreground="{DynamicResource Vna.TextSecondary}" />
+                <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Text="{Binding Marker1Readout}" FontSize="8" Foreground="{DynamicResource Vna.TextMuted}" TextWrapping="Wrap" />
+              </Grid>
+              <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto" ColumnSpacing="10" RowSpacing="3">
+                <TextBlock Text="M2" FontSize="9" FontWeight="Bold" Foreground="{DynamicResource Vna.Marker2}" />
+                <TextBlock Grid.Column="1" Text="{Binding Marker2Text}" FontSize="9" Foreground="{DynamicResource Vna.TextSecondary}" />
+                <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Text="{Binding Marker2Readout}" FontSize="8" Foreground="{DynamicResource Vna.TextMuted}" TextWrapping="Wrap" />
+              </Grid>
+            </StackPanel>
+          </StackPanel>
+        </ScrollViewer>
+      </Border>
+
+      <Grid Grid.Column="1" RowDefinitions="Auto,*,Auto,Auto,Auto" RowSpacing="10">
+        <Border Grid.Row="0" Background="{DynamicResource Vna.Surface}" BorderBrush="{DynamicResource Vna.Border}" BorderThickness="1" CornerRadius="12" Padding="6,4">
+          <WrapPanel Orientation="Horizontal">
+            <Button Classes="Ghost" x:Name="AntennaModeButton" Command="{Binding SelectAntennaModeCommand}" Classes.active="{Binding IsAntennaMode}" Content="{Binding [ModeAntenna], Source={x:Static loc:LocalizationService.Instance}}" Foreground="{DynamicResource Vna.TextPrimary}" Margin="4" />
+            <Button Classes="Ghost" Command="{Binding SelectCableLossModeCommand}" Classes.active="{Binding IsCableLossMode}" Content="{Binding [ModeCableLoss], Source={x:Static loc:LocalizationService.Instance}}" Foreground="{DynamicResource Vna.TextPrimary}" Margin="4" />
+            <Button Classes="Ghost" Command="{Binding SelectCableLengthModeCommand}" Classes.active="{Binding IsCableLengthMode}" Content="{Binding [ModeCableLength], Source={x:Static loc:LocalizationService.Instance}}" Foreground="{DynamicResource Vna.TextPrimary}" Margin="4" />
+            <Button Classes="Ghost" Command="{Binding SelectXtalModeCommand}" Classes.active="{Binding IsXtalMode}" Content="{Binding [ModeXtal], Source={x:Static loc:LocalizationService.Instance}}" Foreground="{DynamicResource Vna.TextPrimary}" Margin="4" />
+            <Button Classes="Ghost" x:Name="FilterModeButton" Command="{Binding SelectFilterModeCommand}" Classes.active="{Binding IsFilterMode}" Content="{Binding [ModeFilter], Source={x:Static loc:LocalizationService.Instance}}" Foreground="{DynamicResource Vna.TextPrimary}" Margin="4" />
+            <Button Classes="Ghost" Command="{Binding SelectGeneratorModeCommand}" Classes.active="{Binding IsGeneratorMode}" Content="{Binding [ModeGenerator], Source={x:Static loc:LocalizationService.Instance}}" Foreground="{DynamicResource Vna.TextPrimary}" Margin="4" />
+          </WrapPanel>
+        </Border>
+        <Border Grid.Row="1" Background="{DynamicResource Vna.Surface}" BorderBrush="{DynamicResource Vna.Border}" BorderThickness="1" CornerRadius="12" Padding="16" IsVisible="{Binding IsAntennaMode}">
+          <Grid RowDefinitions="Auto,*" RowSpacing="10">
+            <StackPanel Spacing="8">
+              <WrapPanel Orientation="Horizontal" IsVisible="{Binding IsAntennaMode}">
+                <Button Classes="Ghost" Classes.active="{Binding IsFrequencyChartSelected}" Content="{Binding [ChartViewFrequency], Source={x:Static loc:LocalizationService.Instance}}" Command="{Binding SelectFrequencyChartCommand}" Margin="0,0,6,4" />
+                <Button Classes="Ghost" Classes.active="{Binding IsSmithChartSelected}" Content="{Binding [ChartViewSmith], Source={x:Static loc:LocalizationService.Instance}}" Command="{Binding SelectSmithChartCommand}" Margin="0,0,6,4" />
+                <Button Classes="Ghost" Classes.active="{Binding IsBothChartViews}" Content="{Binding [ChartViewBoth], Source={x:Static loc:LocalizationService.Instance}}" Command="{Binding SelectBothChartsCommand}" Margin="0,0,6,4" />
+              </WrapPanel>
+              <StackPanel Spacing="2">
+                <TextBlock Text="{Binding [ChartTitle], Source={x:Static loc:LocalizationService.Instance}}" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource Vna.TextPrimary}" />
+                <TextBlock Text="{Binding [MarkerHint], Source={x:Static loc:LocalizationService.Instance}}" FontSize="9" Foreground="{DynamicResource Vna.TextMuted}" TextWrapping="Wrap" />
+                <TextBlock Text="{Binding Status}" FontSize="9" Foreground="{DynamicResource Vna.TextSecondary}" TextWrapping="Wrap" />
+              </StackPanel>
+              <WrapPanel Orientation="Horizontal">
+                <Button x:Name="ZoomInButton" Classes="Ghost" Content="+" FontSize="16" MinWidth="36" ToolTip.Tip="{Binding [ZoomIn], Source={x:Static loc:LocalizationService.Instance}}" Command="{Binding ZoomInCommand}" Margin="0,0,6,4" />
+                <Button x:Name="ZoomOutButton" Classes="Ghost" Content="−" FontSize="16" MinWidth="36" ToolTip.Tip="{Binding [ZoomOut], Source={x:Static loc:LocalizationService.Instance}}" Command="{Binding ZoomOutCommand}" Margin="0,0,8,4" />
+                <Button Classes="Ghost" Content="{Binding [ZoomMarkers], Source={x:Static loc:LocalizationService.Instance}}" Command="{Binding ZoomToMarkersCommand}" Margin="0,0,8,4" />
+                <Button Classes="Ghost" Content="{Binding [PreviousRange], Source={x:Static loc:LocalizationService.Instance}}" Command="{Binding RestoreZoomCommand}" Margin="0,0,8,4" />
+                <Button Classes="Ghost" Content="{Binding [FullRange], Source={x:Static loc:LocalizationService.Instance}}" Command="{Binding ClearZoomCommand}" Margin="0,0,0,4" />
+                <Button Classes="Ghost" Content="{Binding [ProfileRange], Source={x:Static loc:LocalizationService.Instance}}" Command="{Binding ShowProfileRangeCommand}" Margin="0,0,8,4" />
+                <Button Classes="Ghost" Content="{Binding [SaveRange], Source={x:Static loc:LocalizationService.Instance}}" Command="{Binding SaveViewRangeCommand}" Margin="0,0,8,4" />
+                <Button Classes="Ghost" Content="{Binding [RecallRange], Source={x:Static loc:LocalizationService.Instance}}" Command="{Binding RecallViewRangeCommand}" Margin="0,0,0,4" />
+              </WrapPanel>
+              <WrapPanel Orientation="Horizontal" IsVisible="{Binding IsSmithChartVisible}">
+                <TextBlock Text="{Binding [SmithZoomLabel], Source={x:Static loc:LocalizationService.Instance}}" FontSize="8" Foreground="{DynamicResource Vna.TextMuted}" VerticalAlignment="Center" Margin="0,0,8,4" />
+                <Button x:Name="SmithZoomInButton" Classes="Ghost" Content="+" ToolTip.Tip="{Binding [SmithZoomIn], Source={x:Static loc:LocalizationService.Instance}}" Command="{Binding SmithZoomInCommand}" Margin="0,0,4,4" />
+                <Button x:Name="SmithZoomOutButton" Classes="Ghost" Content="−" ToolTip.Tip="{Binding [SmithZoomOut], Source={x:Static loc:LocalizationService.Instance}}" Command="{Binding SmithZoomOutCommand}" Margin="0,0,4,4" />
+                <Button x:Name="SmithResetViewButton" Classes="Ghost" Content="{Binding [SmithResetView], Source={x:Static loc:LocalizationService.Instance}}" Command="{Binding ResetSmithViewCommand}" Margin="0,0,4,4" />
+              </WrapPanel>
+            </StackPanel>
+            <Grid Grid.Row="1">
+              <Grid IsVisible="{Binding IsSingleChartView}">
+                <plot:VnaPlotControl x:Name="Plot" Points="{Binding PlotPoints}" VisibleTraces="{Binding VisibleTraces}" Palette="{Binding PlotPalette}"
+                                 LanguageCode="{Binding Localizer.LanguageCode}"
+                                 Marker1Frequency="{Binding Marker1Frequency}" Marker2Frequency="{Binding Marker2Frequency}"
+                                 MinimumSwrFrequency="{Binding MinimumSwrFrequency}" ShowMinimumSwr="{Binding IsMinimumSwrVisible}" Show50OhmReference="{Binding Show50OhmReference}" ReturnLossX2="{Binding ReturnLossX2}"
+                                 ShowMarker1="{Binding IsMarker1Visible}" ShowMarker2="{Binding IsMarker2Visible}"
+                                 ViewStartHz="{Binding ViewStartHz}" ViewStopHz="{Binding ViewStopHz}"
+                                 IsVisible="{Binding IsFrequencyChartVisible}" />
+                <plot:SmithPlotControl x:Name="SmithPlot" Points="{Binding PlotPoints}" ReferenceImpedanceOhms="{Binding SmithReferenceImpedanceOhms}"
+                                 Palette="{Binding PlotPalette}" LanguageCode="{Binding Localizer.LanguageCode}"
+                                 Marker1Frequency="{Binding Marker1Frequency}" Marker2Frequency="{Binding Marker2Frequency}"
+                                 ShowMarker1="{Binding IsMarker1Visible}" ShowMarker2="{Binding IsMarker2Visible}"
+                                 ViewStartHz="{Binding ViewStartHz}" ViewStopHz="{Binding ViewStopHz}"
+                                 Zoom="{Binding SmithZoom}" PanReal="{Binding SmithPanReal}" PanImaginary="{Binding SmithPanImaginary}"
+                                 IsVisible="{Binding IsSmithChartVisible}" />
+              </Grid>
+              <Grid RowDefinitions="*,*" RowSpacing="6" IsVisible="{Binding IsBothChartViews}">
+                <plot:VnaPlotControl x:Name="PlotBoth" Points="{Binding PlotPoints}" VisibleTraces="{Binding VisibleTraces}" Palette="{Binding PlotPalette}"
+                                 LanguageCode="{Binding Localizer.LanguageCode}"
+                                 Marker1Frequency="{Binding Marker1Frequency}" Marker2Frequency="{Binding Marker2Frequency}"
+                                 MinimumSwrFrequency="{Binding MinimumSwrFrequency}" ShowMinimumSwr="{Binding IsMinimumSwrVisible}" Show50OhmReference="{Binding Show50OhmReference}" ReturnLossX2="{Binding ReturnLossX2}"
+                                 ShowMarker1="{Binding IsMarker1Visible}" ShowMarker2="{Binding IsMarker2Visible}"
+                                 ViewStartHz="{Binding ViewStartHz}" ViewStopHz="{Binding ViewStopHz}" />
+                <plot:SmithPlotControl x:Name="SmithPlotBoth" Grid.Row="1" Points="{Binding PlotPoints}" ReferenceImpedanceOhms="{Binding SmithReferenceImpedanceOhms}"
+                                 Palette="{Binding PlotPalette}" LanguageCode="{Binding Localizer.LanguageCode}"
+                                 Marker1Frequency="{Binding Marker1Frequency}" Marker2Frequency="{Binding Marker2Frequency}"
+                                 ShowMarker1="{Binding IsMarker1Visible}" ShowMarker2="{Binding IsMarker2Visible}"
+                                 ViewStartHz="{Binding ViewStartHz}" ViewStopHz="{Binding ViewStopHz}"
+                                 Zoom="{Binding SmithZoom}" PanReal="{Binding SmithPanReal}" PanImaginary="{Binding SmithPanImaginary}" />
+              </Grid>
+            </Grid>
+          </Grid>
+        </Border>
+        <Border Grid.Row="1" Background="{DynamicResource Vna.Surface}" BorderBrush="{DynamicResource Vna.Border}" BorderThickness="1" CornerRadius="12" Padding="20" IsVisible="{Binding IsCableLengthAnalysisMode}">
+          <StackPanel Spacing="12" VerticalAlignment="Center" MaxWidth="640" HorizontalAlignment="Center">
+            <TextBlock Text="{Binding [CableLengthTitle], Source={x:Static loc:LocalizationService.Instance}}" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource Vna.TextPrimary}" />
+            <TextBlock Text="{Binding [CableLengthHint], Source={x:Static loc:LocalizationService.Instance}}" FontSize="10" Foreground="{DynamicResource Vna.TextSecondary}" TextWrapping="Wrap" />
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="20">
+              <StackPanel Spacing="4">
+                <TextBlock Text="{Binding [CableMarker1], Source={x:Static loc:LocalizationService.Instance}}" FontSize="8" Foreground="{DynamicResource Vna.TextMuted}" />
+                <TextBlock Text="{Binding Marker1Text}" FontSize="10" Foreground="{DynamicResource Vna.Marker1}" />
+              </StackPanel>
+              <StackPanel Grid.Column="1" Spacing="4">
+                <TextBlock Text="{Binding [CableMarker2], Source={x:Static loc:LocalizationService.Instance}}" FontSize="8" Foreground="{DynamicResource Vna.TextMuted}" />
+                <TextBlock Text="{Binding Marker2Text}" FontSize="10" Foreground="{DynamicResource Vna.Marker2}" />
+              </StackPanel>
+            </Grid>
+            <StackPanel Spacing="5" MaxWidth="180">
+              <TextBlock Text="{Binding [CableVelocityFactor], Source={x:Static loc:LocalizationService.Instance}}" FontSize="8" FontWeight="SemiBold" Foreground="{DynamicResource Vna.TextMuted}" />
+              <TextBox Text="{Binding CableVelocityFactorText}" />
+            </StackPanel>
+            <TextBlock Text="{Binding CableLengthResultText}" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource Vna.TextPrimary}" />
+            <Button Classes="Ghost" Command="{Binding SelectAntennaModeCommand}" Content="{Binding [CableLengthReturnToPlot], Source={x:Static loc:LocalizationService.Instance}}" HorizontalAlignment="Left" />
+          </StackPanel>
+        </Border>
+        <Border Grid.Row="1" Background="{DynamicResource Vna.Surface}" BorderBrush="{DynamicResource Vna.Border}" BorderThickness="1" CornerRadius="12" Padding="16" IsVisible="{Binding IsCableLossAnalysisMode}">
+          <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="8">
+            <TextBlock Text="{Binding [CableLossTitle], Source={x:Static loc:LocalizationService.Instance}}" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource Vna.TextPrimary}" />
+            <StackPanel Grid.Row="1" Spacing="4">
+              <TextBlock Text="{Binding [CableLossHint], Source={x:Static loc:LocalizationService.Instance}}" FontSize="10" Foreground="{DynamicResource Vna.TextSecondary}" TextWrapping="Wrap" />
+              <CheckBox IsChecked="{Binding IsCableLossFixtureReady}" IsEnabled="{Binding CanConfirmCableLossFixture}" Content="{Binding [CableLossFixtureCheck], Source={x:Static loc:LocalizationService.Instance}}" Foreground="{DynamicResource Vna.TextPrimary}" />
+            </StackPanel>
+            <plot:VnaPlotControl Grid.Row="2" Points="{Binding AnalysisPlotPoints}" VisibleTraces="{x:Static plot:PlotTrace.ReturnLoss}" ResponseMode="CableLoss"
+                                 Palette="{Binding PlotPalette}" LanguageCode="{Binding Localizer.LanguageCode}"
+                                 Marker1Frequency="{Binding Marker1Frequency}" Marker2Frequency="{Binding Marker2Frequency}"
+                                 ShowMarker1="{Binding IsMarker1Visible}" ShowMarker2="{Binding IsMarker2Visible}"
+                                 ViewStartHz="{Binding ViewStartHz}" ViewStopHz="{Binding ViewStopHz}"
+                                 IsVisible="{Binding IsCableLossPlotAvailable}" />
+            <TextBlock Grid.Row="2" Text="{Binding CableLossFixtureRequiredText}" FontSize="11" Foreground="{DynamicResource Vna.TextSecondary}" TextWrapping="Wrap" VerticalAlignment="Center" HorizontalAlignment="Center"
+                       IsVisible="{Binding !IsCableLossPlotAvailable}" />
+            <Grid Grid.Row="3" ColumnDefinitions="*,*" ColumnSpacing="12">
+              <TextBlock Text="{Binding CableLossMarker1Text}" Foreground="{DynamicResource Vna.Marker1}" />
+              <TextBlock Grid.Column="1" Text="{Binding CableLossMarker2Text}" Foreground="{DynamicResource Vna.Marker2}" />
+            </Grid>
+          </Grid>
+        </Border>
+        <Border Grid.Row="1" Background="{DynamicResource Vna.Surface}" BorderBrush="{DynamicResource Vna.Border}" BorderThickness="1" CornerRadius="12" Padding="20" IsVisible="{Binding IsXtalAnalysisMode}">
+          <StackPanel Spacing="12" VerticalAlignment="Center" MaxWidth="720" HorizontalAlignment="Center">
+            <TextBlock Text="{Binding [ResonanceQTitle], Source={x:Static loc:LocalizationService.Instance}}" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource Vna.TextPrimary}" />
+            <TextBlock Text="{Binding [ResonanceQHint], Source={x:Static loc:LocalizationService.Instance}}" FontSize="10" Foreground="{DynamicResource Vna.TextSecondary}" TextWrapping="Wrap" />
+            <Grid ColumnDefinitions="*,*,*" ColumnSpacing="12">
+              <StackPanel Spacing="5">
+                <TextBlock Text="{Binding [ResonanceFrequencyLabel], Source={x:Static loc:LocalizationService.Instance}}" FontSize="8" Foreground="{DynamicResource Vna.TextMuted}" />
+                <TextBox Text="{Binding ResonanceFrequencyMHz}" />
+              </StackPanel>
+              <StackPanel Grid.Column="1" Spacing="5">
+                <TextBlock Text="{Binding [LowerEdgeLabel], Source={x:Static loc:LocalizationService.Instance}}" FontSize="8" Foreground="{DynamicResource Vna.TextMuted}" />
+                <TextBox Text="{Binding LowerEdgeMHz}" />
+              </StackPanel>
+              <StackPanel Grid.Column="2" Spacing="5">
+                <TextBlock Text="{Binding [UpperEdgeLabel], Source={x:Static loc:LocalizationService.Instance}}" FontSize="8" Foreground="{DynamicResource Vna.TextMuted}" />
+                <TextBox Text="{Binding UpperEdgeMHz}" />
+              </StackPanel>
+            </Grid>
+            <TextBlock Text="{Binding ResonanceQResultText}" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource Vna.TextPrimary}" />
+          </StackPanel>
+        </Border>
+        <Border Grid.Row="1" Background="{DynamicResource Vna.Surface}" BorderBrush="{DynamicResource Vna.Border}" BorderThickness="1" CornerRadius="12" Padding="16" IsVisible="{Binding IsFilterAnalysisMode}">
+          <Grid RowDefinitions="Auto,Auto,*" RowSpacing="8">
+            <TextBlock Text="{Binding [FilterTitle], Source={x:Static loc:LocalizationService.Instance}}" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource Vna.TextPrimary}" />
+            <TextBlock Grid.Row="1" Text="{Binding [FilterHint], Source={x:Static loc:LocalizationService.Instance}}" FontSize="10" Foreground="{DynamicResource Vna.TextSecondary}" TextWrapping="Wrap" />
+            <plot:VnaPlotControl Grid.Row="2" Points="{Binding AnalysisPlotPoints}" VisibleTraces="{x:Static plot:PlotTrace.ReturnLoss}" ResponseMode="Transmission"
+                                 Palette="{Binding PlotPalette}" LanguageCode="{Binding Localizer.LanguageCode}"
+                                 Marker1Frequency="{Binding Marker1Frequency}" Marker2Frequency="{Binding Marker2Frequency}"
+                                 ShowMarker1="{Binding IsMarker1Visible}" ShowMarker2="{Binding IsMarker2Visible}"
+                                 ViewStartHz="{Binding ViewStartHz}" ViewStopHz="{Binding ViewStopHz}" />
+          </Grid>
+        </Border>
+        <Border Grid.Row="1" Background="{DynamicResource Vna.Surface}" BorderBrush="{DynamicResource Vna.Border}" BorderThickness="1" CornerRadius="12" Padding="20" IsVisible="{Binding IsGeneratorAnalysisMode}">
+          <StackPanel Spacing="12" VerticalAlignment="Center" MaxWidth="560" HorizontalAlignment="Center">
+            <TextBlock Text="{Binding [GeneratorTitle], Source={x:Static loc:LocalizationService.Instance}}" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource Vna.TextPrimary}" />
+            <TextBlock Text="{Binding [GeneratorHint], Source={x:Static loc:LocalizationService.Instance}}" FontSize="10" Foreground="{DynamicResource Vna.TextSecondary}" TextWrapping="Wrap" />
+            <StackPanel Spacing="5">
+              <TextBlock Text="{Binding [GeneratorMemory], Source={x:Static loc:LocalizationService.Instance}}" FontSize="8" FontWeight="SemiBold" Foreground="{DynamicResource Vna.TextMuted}" />
+              <ComboBox ItemsSource="{Binding GeneratorMemories}" SelectedItem="{Binding SelectedGeneratorMemory, Mode=TwoWay}">
+                <ComboBox.ItemTemplate>
+                  <DataTemplate><TextBlock Text="{Binding DisplayText}" /></DataTemplate>
+                </ComboBox.ItemTemplate>
+              </ComboBox>
+            </StackPanel>
+            <StackPanel Spacing="5" MaxWidth="200">
+              <TextBlock Text="{Binding [GeneratorFrequency], Source={x:Static loc:LocalizationService.Instance}}" FontSize="8" FontWeight="SemiBold" Foreground="{DynamicResource Vna.TextMuted}" />
+              <TextBox Text="{Binding GeneratorFrequencyMHz}" />
+            </StackPanel>
+            <Button Classes="Primary" Content="{Binding [GeneratorOutputOn], Source={x:Static loc:LocalizationService.Instance}}" IsEnabled="{Binding CanEnableGeneratorOutput}" HorizontalAlignment="Left" />
+            <TextBlock Text="{Binding [GeneratorOutputBlocked], Source={x:Static loc:LocalizationService.Instance}}" FontSize="9" Foreground="{DynamicResource Vna.TextMuted}" TextWrapping="Wrap" />
+          </StackPanel>
+        </Border>
+        <Border Grid.Row="1" Background="{DynamicResource Vna.Surface}" BorderBrush="{DynamicResource Vna.Border}" BorderThickness="1" CornerRadius="12" Padding="20" IsVisible="{Binding IsUnavailableMode}">
+          <StackPanel Spacing="8" VerticalAlignment="Center">
+            <TextBlock Text="{Binding ModeUnavailableMessage}" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource Vna.TextPrimary}" TextWrapping="Wrap" />
+            <TextBlock Text="{Binding Status}" FontSize="9" Foreground="{DynamicResource Vna.TextSecondary}" TextWrapping="Wrap" />
+          </StackPanel>
+        </Border>
+        <Border x:Name="MarkerValuesTable" Grid.Row="2" Background="{DynamicResource Vna.Surface}" BorderBrush="{DynamicResource Vna.Border}" BorderThickness="1" CornerRadius="12" Padding="12,8" IsVisible="{Binding IsAntennaMode}">
+          <Grid>
+          <Grid x:Name="FullMarkerValues" IsVisible="{Binding ShowFullMarkerValues}" RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="34,*,*,*,*,*,*,*,*" ColumnSpacing="5" RowSpacing="6">
+            <TextBlock Grid.Column="1" Text="{Binding [ValueFrequency], Source={x:Static loc:LocalizationService.Instance}}" FontSize="7" FontWeight="Bold" Foreground="{DynamicResource Vna.TextMuted}" HorizontalAlignment="Center" />
+            <TextBlock Grid.Column="2" Text="SWR" FontSize="7" FontWeight="Bold" Foreground="{DynamicResource Vna.TextMuted}" HorizontalAlignment="Center" />
+            <TextBlock Grid.Column="3" Text="|Z| Ω" FontSize="7" FontWeight="Bold" Foreground="{DynamicResource Vna.TextMuted}" HorizontalAlignment="Center" />
+            <TextBlock Grid.Column="4" Text="R.L. dB" FontSize="7" FontWeight="Bold" Foreground="{DynamicResource Vna.TextMuted}" HorizontalAlignment="Center" />
+            <TextBlock Grid.Column="5" Text="{Binding [ValuePhase], Source={x:Static loc:LocalizationService.Instance}}" FontSize="7" FontWeight="Bold" Foreground="{DynamicResource Vna.TextMuted}" HorizontalAlignment="Center" />
+            <TextBlock Grid.Column="6" Text="R Ω" FontSize="7" FontWeight="Bold" Foreground="{DynamicResource Vna.TextMuted}" HorizontalAlignment="Center" />
+            <TextBlock Grid.Column="7" Text="|X| Ω" FontSize="7" FontWeight="Bold" Foreground="{DynamicResource Vna.TextMuted}" HorizontalAlignment="Center" />
+            <TextBlock Grid.Column="8" Text="Xc/Xl" IsVisible="{Binding ShowXcXl}" FontSize="7" FontWeight="Bold" Foreground="{DynamicResource Vna.TextMuted}" HorizontalAlignment="Center" />
+            <TextBlock Grid.Row="1" Text="M1" FontSize="8" FontWeight="Bold" Foreground="{DynamicResource Vna.Marker1}" VerticalAlignment="Center" />
+            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Marker1Values.Frequency}" FontSize="8" Foreground="{DynamicResource Vna.TextPrimary}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+            <TextBlock Grid.Row="1" Grid.Column="2" Text="{Binding Marker1Values.Swr}" FontSize="8" Foreground="{DynamicResource Vna.TextPrimary}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+            <TextBlock Grid.Row="1" Grid.Column="3" Text="{Binding Marker1Values.Impedance}" FontSize="8" Foreground="{DynamicResource Vna.TextPrimary}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+            <TextBlock Grid.Row="1" Grid.Column="4" Text="{Binding Marker1Values.ReturnLoss}" FontSize="8" Foreground="{DynamicResource Vna.TextPrimary}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+            <TextBlock Grid.Row="1" Grid.Column="5" Text="{Binding Marker1Values.Phase}" FontSize="8" Foreground="{DynamicResource Vna.TextPrimary}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+            <TextBlock Grid.Row="1" Grid.Column="6" Text="{Binding Marker1Values.Resistance}" FontSize="8" Foreground="{DynamicResource Vna.TextPrimary}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+            <TextBlock Grid.Row="1" Grid.Column="7" Text="{Binding Marker1Values.Reactance}" FontSize="8" Foreground="{DynamicResource Vna.TextPrimary}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+            <TextBlock Grid.Row="1" Grid.Column="8" Text="{Binding Marker1Values.ReactanceComponent}" IsVisible="{Binding ShowXcXl}" FontSize="8" Foreground="{DynamicResource Vna.TextPrimary}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+            <TextBlock Grid.Row="2" Text="M2" FontSize="8" FontWeight="Bold" Foreground="{DynamicResource Vna.Marker2}" VerticalAlignment="Center" />
+            <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Marker2Values.Frequency}" FontSize="8" Foreground="{DynamicResource Vna.TextPrimary}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+            <TextBlock Grid.Row="2" Grid.Column="2" Text="{Binding Marker2Values.Swr}" FontSize="8" Foreground="{DynamicResource Vna.TextPrimary}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+            <TextBlock Grid.Row="2" Grid.Column="3" Text="{Binding Marker2Values.Impedance}" FontSize="8" Foreground="{DynamicResource Vna.TextPrimary}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+            <TextBlock Grid.Row="2" Grid.Column="4" Text="{Binding Marker2Values.ReturnLoss}" FontSize="8" Foreground="{DynamicResource Vna.TextPrimary}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+            <TextBlock Grid.Row="2" Grid.Column="5" Text="{Binding Marker2Values.Phase}" FontSize="8" Foreground="{DynamicResource Vna.TextPrimary}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+            <TextBlock Grid.Row="2" Grid.Column="6" Text="{Binding Marker2Values.Resistance}" FontSize="8" Foreground="{DynamicResource Vna.TextPrimary}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+            <TextBlock Grid.Row="2" Grid.Column="7" Text="{Binding Marker2Values.Reactance}" FontSize="8" Foreground="{DynamicResource Vna.TextPrimary}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+            <TextBlock Grid.Row="2" Grid.Column="8" Text="{Binding Marker2Values.ReactanceComponent}" IsVisible="{Binding ShowXcXl}" FontSize="8" Foreground="{DynamicResource Vna.TextPrimary}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+          </Grid>
+          <Grid x:Name="CompactMarkerValues" IsVisible="{Binding ShowCompactMarkerValues}" RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="34,*,*" ColumnSpacing="8" RowSpacing="6">
+            <TextBlock Grid.Column="1" Text="{Binding [ValueFrequency], Source={x:Static loc:LocalizationService.Instance}}" FontSize="7" FontWeight="Bold" Foreground="{DynamicResource Vna.TextMuted}" HorizontalAlignment="Center" />
+            <TextBlock Grid.Column="2" Text="R.L. dB" FontSize="7" FontWeight="Bold" Foreground="{DynamicResource Vna.TextMuted}" HorizontalAlignment="Center" />
+            <TextBlock Grid.Row="1" Text="M1" FontSize="8" FontWeight="Bold" Foreground="{DynamicResource Vna.Marker1}" VerticalAlignment="Center" />
+            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Marker1Values.Frequency}" FontSize="8" Foreground="{DynamicResource Vna.TextPrimary}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+            <TextBlock Grid.Row="1" Grid.Column="2" Text="{Binding Marker1Values.ReturnLoss}" FontSize="8" Foreground="{DynamicResource Vna.TextPrimary}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+            <TextBlock Grid.Row="2" Text="M2" FontSize="8" FontWeight="Bold" Foreground="{DynamicResource Vna.Marker2}" VerticalAlignment="Center" />
+            <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Marker2Values.Frequency}" FontSize="8" Foreground="{DynamicResource Vna.TextPrimary}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+            <TextBlock Grid.Row="2" Grid.Column="2" Text="{Binding Marker2Values.ReturnLoss}" FontSize="8" Foreground="{DynamicResource Vna.TextPrimary}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+          </Grid>
+          </Grid>
+        </Border>
+        <Border Grid.Row="3" Background="{DynamicResource Vna.Surface}" BorderBrush="{DynamicResource Vna.Border}" BorderThickness="1" CornerRadius="12" Padding="16,10" IsVisible="{Binding IsAntennaMode}">
+          <Grid ColumnDefinitions="*,*,*,*,*,*" ColumnSpacing="12">
+            <StackPanel Spacing="3"><TextBlock Text="{Binding [MinimumSwr], Source={x:Static loc:LocalizationService.Instance}}" FontSize="8" FontWeight="Bold" Foreground="{DynamicResource Vna.TextMuted}" /><TextBlock Text="{Binding MinimumSwrText}" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource Vna.TextPrimary}" /></StackPanel>
+            <StackPanel Grid.Column="1" Spacing="3"><TextBlock Text="{Binding [Samples], Source={x:Static loc:LocalizationService.Instance}}" FontSize="8" FontWeight="Bold" Foreground="{DynamicResource Vna.TextMuted}" /><TextBlock Text="{Binding Points.Count}" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource Vna.TextPrimary}" /></StackPanel>
+            <StackPanel Grid.Column="2" Spacing="3"><TextBlock Text="M1" FontSize="8" FontWeight="Bold" Foreground="{DynamicResource Vna.Marker1}" /><TextBlock Text="{Binding Marker1Text}" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource Vna.TextPrimary}" /></StackPanel>
+            <StackPanel Grid.Column="3" Spacing="3"><TextBlock Text="M2" FontSize="8" FontWeight="Bold" Foreground="{DynamicResource Vna.Marker2}" /><TextBlock Text="{Binding Marker2Text}" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource Vna.TextPrimary}" /></StackPanel>
+            <StackPanel Grid.Column="4" Spacing="3"><TextBlock Text="{Binding [Bandwidth], Source={x:Static loc:LocalizationService.Instance}}" FontSize="8" FontWeight="Bold" Foreground="{DynamicResource Vna.TextMuted}" /><TextBlock Text="{Binding BandwidthText}" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource Vna.TextPrimary}" /></StackPanel>
+            <StackPanel Grid.Column="5" Spacing="3" ToolTip.Tip="{Binding [MarkerQHint], Source={x:Static loc:LocalizationService.Instance}}"><TextBlock Text="{Binding [MarkerQEstimate], Source={x:Static loc:LocalizationService.Instance}}" FontSize="8" FontWeight="Bold" Foreground="{DynamicResource Vna.TextMuted}" /><TextBlock Text="{Binding MarkerQEstimateText}" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource Vna.TextPrimary}" /></StackPanel>
+          </Grid>
+        </Border>
+        <Border Grid.Row="4" Background="{DynamicResource Vna.ErrorBackground}" CornerRadius="8" Padding="12" IsVisible="{Binding HasError}">
+          <TextBlock Text="{Binding Error}" Foreground="{DynamicResource Vna.ErrorForeground}" FontSize="10" TextWrapping="Wrap" />
+        </Border>
+      </Grid>
+    </Grid>
+  </Grid>
+</Window>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
