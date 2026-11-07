@@ -51,8 +51,40 @@ public static class MeasurementCsvFile
         DeviceProfile profile,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(profile);
+        return await LoadCoreAsync(
+            source,
+            profile.Id,
+            profile,
+            null,
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>Loads CSV against neutral profile metadata without manufacturing legacy protocol defaults.</summary>
+    public static Task<MeasurementSession> LoadAsync(
+        Stream source,
+        DeviceProfileDescriptor profile,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(profile);
+        return LoadCoreAsync(
+            source,
+            profile.Id,
+            null,
+            profile,
+            cancellationToken);
+    }
+
+    private static async Task<MeasurementSession> LoadCoreAsync(
+        Stream source,
+        string profileId,
+        DeviceProfile? legacyProfileSnapshot,
+        DeviceProfileDescriptor? profileDescriptorSnapshot,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        if ((legacyProfileSnapshot is null) == (profileDescriptorSnapshot is null))
+            throw new ArgumentException("Exactly one legacy or neutral profile snapshot is required.");
         if (!source.CanRead) throw new ArgumentException("The stream is not readable.", nameof(source));
 
         using var reader = new StreamReader(source, new UTF8Encoding(false, true), detectEncodingFromByteOrderMarks: true,
@@ -141,19 +173,26 @@ public static class MeasurementCsvFile
 
         if (points.Count < 2) throw new InvalidDataException("CSV must contain at least two measurement rows.");
         var sweep = new SweepSettings(points[0].FrequencyHz, points[^1].FrequencyHz, points.Count);
-        sweep.ValidateAgainst(profile);
+        if (profileDescriptorSnapshot is not null)
+            sweep.ValidateAgainst(profileDescriptorSnapshot);
+        else
+            sweep.ValidateAgainst(legacyProfileSnapshot!);
         for (var index = 0; index < points.Count; index++)
         {
             if (points[index].FrequencyHz != sweep.FrequencyAt(index))
                 throw new InvalidDataException("CSV frequencies must be strictly increasing and evenly spaced across the sweep.");
         }
 
-        return new MeasurementSession(MeasurementSessionFile.CurrentFormatVersion, profile.Id,
+        return new MeasurementSession(MeasurementSessionFile.CurrentFormatVersion, profileId,
             isAnyStudioFormat ? "VNA Studio CSV" : "Analyser 306b antenna CSV",
             DateTimeOffset.UtcNow, sweep, points)
         {
-            ProfileSnapshot = profile,
+            ProfileSnapshot = legacyProfileSnapshot,
+            ProfileDescriptorSnapshot = profileDescriptorSnapshot,
             AnalysisMode = csvMode ?? SessionAnalysisMode.Antenna,
+            // CSV stores the analysis mode and per-point values, but not a separate evidence-backed data-kind field.
+            // Keep the kind unknown instead of inferring it from the mode label.
+            MeasurementDataKind = MeasurementDataKind.Unknown,
         };
     }
 

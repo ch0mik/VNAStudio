@@ -101,35 +101,12 @@ public sealed class SerialPortTransport : ISerialTransport
 
         var stream = GetOpenStream();
         var port = _port ?? throw LocalizedErrors.InvalidOperation("SerialNotOpen");
-        using var cancellationRegistration = cancellationToken.Register(static state =>
-            DisposePort((SerialPort)state!), port);
-        using var timeoutSource = new CancellationTokenSource();
-        if (timeout != Timeout.InfiniteTimeSpan) timeoutSource.CancelAfter(timeout);
-        using var linkedSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutSource.Token);
-
-        var received = 0;
-        while (received < destination.Length)
-        {
-            int count;
-            try
-            {
-                count = await stream.ReadAsync(destination[received..], linkedSource.Token).ConfigureAwait(false);
-            }
-            catch (OperationCanceledException) when (timeoutSource.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
-            {
-                throw LocalizedErrors.Timeout("SerialReadTimeout", timeout);
-            }
-            catch (Exception) when (cancellationToken.IsCancellationRequested)
-            {
-                throw new OperationCanceledException(cancellationToken);
-            }
-
-            cancellationToken.ThrowIfCancellationRequested();
-            if (count == 0)
-                throw LocalizedErrors.EndOfStream("SerialStreamClosed", received, destination.Length);
-
-            received += count;
-        }
+        await SerialStreamReader.ReadExactlyAsync(
+            stream,
+            destination,
+            timeout,
+            cancellationToken,
+            () => DisposePort(port)).ConfigureAwait(false);
     }
 
     public ValueTask CloseAsync()

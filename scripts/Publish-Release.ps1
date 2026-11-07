@@ -30,8 +30,9 @@ if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed for '$Rid'." }
 
 $metadata = [ordered]@{ application = 'VnaStudio'; version = $version; tag = $Tag; rid = $Rid; selfContained = $true }
 $metadata | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $publish 'release-info.json') -Encoding utf8NoBOM
+# Validate every release publish before either packaging it or returning it for inspection.
+Assert-VnaPublishOutput -Directory $publish -Tag $Tag -Rid $Rid
 if ($PublishOnly) {
-    Assert-VnaPublishOutput -Directory $publish -Tag $Tag -Rid $Rid
     return $publish
 }
 $archive = New-VnaReleaseArchive -Directory $publish -Destination (Join-Path $ArtifactsDirectory 'packages') -Tag $Tag -Rid $Rid

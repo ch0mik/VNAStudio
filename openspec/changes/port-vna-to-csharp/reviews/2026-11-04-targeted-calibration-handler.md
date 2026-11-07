@@ -2,7 +2,7 @@
 
 ## Source and method
 
-Retried Ghidra decompilation of the saved Analyser 306b project for procedure `VB6_0043094f`, writing the output under the sibling `../decompiled/targeted-recovery-cal/` directory, outside the VnaStudio project. This recovered 364,798 bytes of pseudocode.
+Retried Ghidra decompilation of the saved Analyser 306b project for procedure `VB6_0043094f`, writing the output under the sibling `../../../../../VNA-ReverseEngineering/decompiled/targeted-recovery-cal/` directory, outside the VnaStudio project. This recovered 364,798 bytes of pseudocode.
 
 ## Confirmed strings and control-flow observations
 

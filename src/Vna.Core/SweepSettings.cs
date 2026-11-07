@@ -35,7 +35,19 @@ public sealed record SweepSettings
     {
         ArgumentNullException.ThrowIfNull(profile);
 
-        if (StartFrequencyHz < profile.MinimumFrequencyHz || StopFrequencyHz > profile.MaximumFrequencyHz)
-            throw LocalizedErrors.ArgumentOutOfRange(nameof(StartFrequencyHz), "SweepRange", profile.MinimumFrequencyHz / 1_000_000.0, profile.MaximumFrequencyHz / 1_000_000.0);
+        ValidateAgainst(profile.MinimumFrequencyHz, profile.MaximumFrequencyHz);
+    }
+
+    public void ValidateAgainst(DeviceProfileDescriptor profile)
+    {
+        ArgumentNullException.ThrowIfNull(profile);
+
+        ValidateAgainst(profile.MinimumFrequencyHz, profile.MaximumFrequencyHz);
+    }
+
+    private void ValidateAgainst(long minimumFrequencyHz, long maximumFrequencyHz)
+    {
+        if (StartFrequencyHz < minimumFrequencyHz || StopFrequencyHz > maximumFrequencyHz)
+            throw LocalizedErrors.ArgumentOutOfRange(nameof(StartFrequencyHz), "SweepRange", minimumFrequencyHz / 1_000_000.0, maximumFrequencyHz / 1_000_000.0);
     }
 }

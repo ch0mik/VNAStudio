@@ -129,7 +129,7 @@ public sealed class LocalizationTests
         var services = new ServiceCollection();
         services.Configure<AppSettings>(config);
         using var provider = services.BuildServiceProvider();
-        await using var vm = new MainWindowViewModel(new DemoVnaDevice(DeviceProfile.Vna65MHz),
+        await using var vm = new MainWindowViewModel(new DemoVnaDevice(Vna65MHzDeviceProfile.Default),
             new SerialPortCatalog(), provider.GetRequiredService<IOptionsMonitor<AppSettings>>(), "unused-settings.json");
         Assert.Equal("en-US", vm.SelectedLanguage!.Code);
         Assert.Equal("Ready. Device not connected.", vm.Status);

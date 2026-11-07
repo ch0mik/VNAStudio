@@ -19,6 +19,8 @@ public static class AppSettingsFile
     {
         ArgumentNullException.ThrowIfNull(settings);
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
+        if (!AppSettingsValidation.TryValidate(settings, out var validationError))
+            throw new ArgumentException(validationError, nameof(settings));
         path = Path.GetFullPath(path);
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         var temporaryPath = $"{path}.{Guid.NewGuid():N}.tmp";

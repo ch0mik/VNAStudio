@@ -40,7 +40,7 @@ public sealed class ThemeTests
     [Fact]
     public void NightPlotUsesOnlyRedAndDistinctTracePatterns()
     {
-        var palette = PlotPalette.FromProfile(DeviceProfile.Vna65MHz, AppThemeKind.NightVision);
+        var palette = PlotPalette.FromProfile(Vna65MHzDeviceProfile.Default, AppThemeKind.NightVision);
         foreach (var value in new[] { palette.Background, palette.Grid, palette.Border, palette.AxisText, palette.AxisTitle,
                      palette.MinimumMarker, palette.Marker1, palette.Marker2 }.Concat(PlotSeriesCatalog.All.Select(s => palette.GetColor(s.Trace))))
         {
@@ -54,7 +54,7 @@ public sealed class ThemeTests
     [Fact]
     public void DarkPaletteMakesDarkTracesVisibleAndLeavesProfileUnchanged()
     {
-        var profile = DeviceProfile.Vna65MHz with { PlotColors = LegacyPlotColorSettings.Default with { Swr = 0, Background = 0xFFFFFF } };
+        var profile = Vna65MHzDeviceProfile.Default with { PlotColors = LegacyPlotColorSettings.Default with { Swr = 0, Background = 0xFFFFFF } };
         var palette = PlotPalette.FromProfile(profile, AppThemeKind.Dark);
         Assert.Equal("#101722", palette.Background);
         Assert.NotEqual("#000000", palette.GetColor(PlotTrace.Swr));
@@ -139,7 +139,7 @@ public sealed class ThemeTests
     public async Task LoadingSessionPreservesThemeAndOriginalStoredPalette(string theme)
     {
         await using var vm = TestData.ViewModel(new AppSettings { Theme = theme });
-        var profile = DeviceProfile.Vna65MHz with { PlotColors = LegacyPlotColorSettings.Default with { Swr = 0x00FF00 } };
+        var profile = Vna65MHzDeviceProfile.Default with { PlotColors = LegacyPlotColorSettings.Default with { Swr = 0x00FF00 } };
         vm.LoadSession(TestData.Session(profile));
         Assert.Equal(theme, vm.SelectedTheme.Code);
         Assert.Equal(profile, vm.CreateSession()!.ProfileSnapshot);
@@ -158,7 +158,7 @@ public sealed class ThemeTests
         var services = new ServiceCollection();
         services.Configure<AppSettings>(config);
         using var provider = services.BuildServiceProvider();
-        await using var vm = new MainWindowViewModel(new DemoVnaDevice(DeviceProfile.Vna65MHz), new SerialPortCatalog(),
+        await using var vm = new MainWindowViewModel(new DemoVnaDevice(Vna65MHzDeviceProfile.Default), new SerialPortCatalog(),
             provider.GetRequiredService<IOptionsMonitor<AppSettings>>(), "unused-settings.json");
         Assert.Equal("dark", vm.SelectedTheme.Code);
         config["Theme"] = "night-vision";
@@ -225,7 +225,7 @@ public sealed class ThemeTests
         {
             Points = Enumerable.Range(0, 649).Select(i => TestData.Point(1_000_000 + i * 1000) with { ReturnLossDb = -11.3 }).ToArray(),
             VisibleTraces = PlotTrace.ReturnLoss,
-            Palette = PlotPalette.FromProfile(DeviceProfile.Vna65MHz, AppThemeKind.NightVision),
+            Palette = PlotPalette.FromProfile(Vna65MHzDeviceProfile.Default, AppThemeKind.NightVision),
         };
         var window = new Window { Content = plot, Width = 700, Height = 400, RequestedThemeVariant = AppThemes.NightVision };
         try
@@ -250,7 +250,7 @@ public sealed class ThemeTests
     public async Task RenderThemePreviewsFromFullDemonstrationSweep()
     {
         var cancellation = TestContext.Current.CancellationToken;
-        await using var device = new DemoVnaDevice(DeviceProfile.Vna65MHz);
+        await using var device = new DemoVnaDevice(Vna65MHzDeviceProfile.Default);
         await device.ConnectAsync(new DeviceConnectionOptions(string.Empty), cancellation);
         var sweep = new SweepSettings(1_000_000, 65_000_000, 649);
         var points = new List<MeasurementPoint>();

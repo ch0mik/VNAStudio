@@ -1,7 +1,7 @@
 using Vna.Localization;
 using Vna.Core;
 
-namespace Vna.IO;
+namespace Vna.Device.Vna65MHz;
 
 public static class LegacyAnalyzIniProfileFactory
 {
@@ -85,6 +85,12 @@ public static class LegacyAnalyzIniProfileFactory
                 PhaseA: calibration.PhA,
                 PhaseB: calibration.PhB,
                 InputVelocityFactor: parameters.InputVelFactor),
+            Capabilities = IsKnownVna65Profile(options)
+                ? Vna65MHzDeviceProfile.Default.Capabilities
+                : Array.Empty<DeviceCapabilityDescriptor>(),
+            Connectors = IsKnownVna65Profile(options)
+                ? Vna65MHzDeviceProfile.Default.Connectors
+                : Array.Empty<DeviceConnectorDescriptor>(),
             PlotColors = new LegacyPlotColorSettings(
                 Phase: (uint)graph.ColorS1,
                 ReturnLoss: (uint)graph.ColorS2,
@@ -97,6 +103,16 @@ public static class LegacyAnalyzIniProfileFactory
             LegacyBandPresets = legacyBands,
         };
     }
+
+    private static bool IsKnownVna65Profile(LegacyAnalyzIniOptions options) =>
+        string.Equals(options.Profile.Id, Vna65MHzDeviceProfile.Default.Id, StringComparison.Ordinal) &&
+        options.Parameters.FMin == Vna65MHzDeviceProfile.Default.MinimumFrequencyHz &&
+        options.Parameters.FMax == Vna65MHzDeviceProfile.Default.MaximumFrequencyHz &&
+        options.Parameters.DdsClock == Vna65MHzDeviceProfile.Default.DdsClockHz &&
+        options.Parameters.DdsPll == Vna65MHzDeviceProfile.Default.DdsPllPrescaler &&
+        options.PortSetting.VnaType == Vna65MHzDeviceProfile.Default.LegacyVnaType &&
+        options.PortSetting.PortType == 2 &&
+        options.PortSetting.Svna == (Vna65MHzDeviceProfile.Default.LegacySvna ? 1 : 0);
 
     private static AmateurBandPreset[] CreateBandPresets(LegacyBandLimitSection limits)
     {

@@ -235,7 +235,7 @@ public sealed class PlotInteractionTests
         long startHz, long stopHz, long expectedBandwidthHz, int expectedQ)
     {
         await using var vm = TestData.ViewModel();
-        var profile = DeviceProfile.Vna65MHz;
+        var profile = Vna65MHzDeviceProfile.Default;
         var sweep = new SweepSettings(startHz, stopHz, 2);
         var session = new MeasurementSession(2, profile.Id, "reference-screenshot", DateTimeOffset.UnixEpoch,
             sweep, new[] { TestData.Point(startHz), TestData.Point(stopHz) }) { ProfileSnapshot = profile };
@@ -250,7 +250,7 @@ public sealed class PlotInteractionTests
     public async Task BandwidthFormattingFollowsTheSelectedLanguageImmediately()
     {
         await using var vm = TestData.ViewModel();
-        var profile = DeviceProfile.Vna65MHz;
+        var profile = Vna65MHzDeviceProfile.Default;
         var sweep = new SweepSettings(3_842_000, 7_148_000, 2);
         vm.LoadSession(new MeasurementSession(2, profile.Id, "test", DateTimeOffset.UnixEpoch, sweep,
             new[] { TestData.Point(3_842_000), TestData.Point(7_148_000) }) { ProfileSnapshot = profile });
@@ -265,7 +265,7 @@ public sealed class PlotInteractionTests
     public async Task CableLengthModeEstimatesFromSameTypeResonanceMarkerSpacingAndPersistedVelocityFactor()
     {
         await using var vm = TestData.ViewModel();
-        var profile = DeviceProfile.Vna65MHz;
+        var profile = Vna65MHzDeviceProfile.Default;
         var sweep = new SweepSettings(1_000_000, 9_000_000, 9);
         var session = new MeasurementSession(2, profile.Id, "cable-test", DateTimeOffset.UnixEpoch, sweep,
             new[] { 1d, 4d, 1d, 4d, 1d, 4d, 1d, 4d, 1d }
@@ -362,7 +362,7 @@ public sealed class PlotInteractionTests
     [AvaloniaFact]
     public async Task LegacyBandRangesOverrideShortcutsAndOutOfProfileBandsAreHidden()
     {
-        var profile = DeviceProfile.Vna65MHz with
+        var profile = Vna65MHzDeviceProfile.Default with
         {
             LegacyBandPresets =
             [
@@ -462,7 +462,7 @@ public sealed class PlotInteractionTests
     [InlineData(1920, 1080, 1.5, AppThemeKind.NightVision)]
     public void SmithControlRendersResponsivelyWithThemeAndDpi(int width, int height, double scaling, AppThemeKind theme)
     {
-        var profile = DeviceProfile.Vna65MHz;
+        var profile = Vna65MHzDeviceProfile.Default;
         var chart = new SmithPlotControl
         {
             ReferenceImpedanceOhms = profile.ReferenceImpedanceOhms,
@@ -508,7 +508,7 @@ public sealed class PlotInteractionTests
         {
             Points = points,
             ReferenceImpedanceOhms = 50,
-            Palette = PlotPalette.FromProfile(DeviceProfile.Vna65MHz, AppThemeKind.Dark),
+            Palette = PlotPalette.FromProfile(Vna65MHzDeviceProfile.Default, AppThemeKind.Dark),
             LanguageCode = "en-US",
             Width = 1000,
             Height = 600,
@@ -765,7 +765,7 @@ public sealed class PlotInteractionTests
     public async Task LoadedSessionRestoresSamePaletteForChartAndLegend()
     {
         await using var vm = TestData.ViewModel();
-        var profile = DeviceProfile.Vna65MHz with
+        var profile = Vna65MHzDeviceProfile.Default with
         {
             PlotColors = LegacyPlotColorSettings.Default with { Swr = 0x00FF00, Background = 0x010203 },
         };
@@ -783,7 +783,11 @@ public sealed class PlotInteractionTests
         await using var vm = TestData.ViewModel();
         var original = TestData.Session();
         vm.LoadSession(original);
-        var incompatible = TestData.Session(DeviceProfile.Vna65MHz with { Id = "another-device" });
+        var incompatible = TestData.Session(Vna65MHzDeviceProfile.Default with { Id = "another-device" }) with
+        {
+            ProfileSnapshot = null,
+            ProfileDescriptorSnapshot = null,
+        };
         Assert.Throws<InvalidDataException>(() => vm.LoadSession(incompatible));
         Assert.Equal(original.Points.ToArray(), vm.PlotPoints.ToArray());
     }
@@ -927,7 +931,7 @@ public sealed class PlotInteractionTests
             filter.Command!.Execute(null);
             await Dispatcher.UIThread.InvokeAsync(window.UpdateLayout, DispatcherPriority.Background);
             Assert.Equal(AnalysisMode.Filter, vm.SelectedMode);
-            Assert.True(vm.CanSaveSession);
+            Assert.False(vm.CanSaveSession);
             Assert.False(plot.IsEffectivelyVisible);
             Assert.False(table.IsEffectivelyVisible);
             Assert.True(vm.IsFilterAnalysisMode);
@@ -1004,7 +1008,7 @@ public sealed class PlotInteractionTests
 
         public InterruptedSecondSweepDevice(bool failSecondSweep) => _failSecondSweep = failSecondSweep;
 
-        public DeviceProfile Profile => DeviceProfile.Vna65MHz;
+        public DeviceProfile Profile => Vna65MHzDeviceProfile.Default;
         public string DataSourceName => "controlled-test-device";
         public bool IsConnected => _connected;
 

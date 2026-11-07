@@ -2,14 +2,17 @@
 
 ## 1. Materiały i specyfikacja referencyjna
 
-- [x] 1.1 Zachować pakiet vna/J, spis klas i hash; dowód: `../reference/vnaj-3.4.8/` oraz `PLAN.md`.
-- [x] 1.2 Zinwentaryzować i częściowo zdekompilować lokalne aplikacje VB6; dowód: `../decompiled/README.md`, `summary.json` i raporty brakujących procedur.
-- [x] 1.3 Odczytać profil 65 MHz i zebrać wzorce wykresów; dowód: `../decompiled/SPEC.md`, `PLOTS.md` i `../reference/hardware/screenshots/`.
-- [ ] 1.4 Zdekompilować klasy aplikacji vna/J narzędziem o zapisanej wersji; sprawdzić trudne metody przez `javap` i dostarczyć raport błędów oraz polecenia powtórzenia.
-- [ ] 1.5 Utworzyć macierz funkcji Analyser 306b/vna/J z priorytetami, źródłami i kryteriami zgodności; sprawdzić uwzględnienie wszystkich funkcji i modeli z dokumentacji oraz zasobów.
-- [ ] 1.6 Ustalić kontrakt protokołu wariantu użytkownika: port, komendy trybów, DDS, kodowanie ADC i timeouty; zweryfikować zapisem transmisji lub udokumentowaną analizą kodu oraz oznaczyć brak potwierdzenia sprzętowego, jeśli go nie ma.
+- [x] 1.1 Zachować pakiet vna/J, spis klas i hash; dowód: [`vna/J 3.4.8`](../../../../VNA-ReverseEngineering/reference/vnaj-3.4.8/), [`PLAN.md`](../../../PLAN.md) oraz manifest badawczy.
+- [x] 1.2 Zinwentaryzować i częściowo zdekompilować lokalne aplikacje VB6; dowód: [`decompiled/README.md`](../../../../VNA-ReverseEngineering/decompiled/README.md), `summary.json` i raporty brakujących procedur.
+- [x] 1.3 Odczytać profil 65 MHz i zebrać wzorce wykresów; dowód: [`decompiled/SPEC.md`](../../../../VNA-ReverseEngineering/decompiled/SPEC.md), [`PLOTS.md`](../../../PLOTS.md) i [`reference/hardware/screenshots`](../../../../VNA-ReverseEngineering/reference/hardware/screenshots/).
+- [ ] 1.4 Zdekompilować klasy aplikacji vna/J narzędziem o zapisanej wersji; sprawdzić trudne metody przez `javap` i dostarczyć raport błędów oraz polecenia powtórzenia. Wybrane klasy sprawdzono `javap`-em w podzadaniu 1.4a; pełna dekompilacja pozostaje otwarta.
+- [x] 1.4a Statycznie przejrzeć wybrane klasy Smith i standardowego sterownika szeregowego przez systemowy `javap 11.0.25`; zapisać komendy, wynikowe fakty i granice wnioskowania bez uruchamiania JAR-a. Review: [`2026-11-07-stage-1-4a-vnaj-javap.md`](reviews/2026-11-07-stage-1-4a-vnaj-javap.md); raport: `../../../../VNA-ReverseEngineering/analysis/vnaj-3.4.8-javap-static-review-2026-11-07.md`.
+- [x] 1.5 Utworzyć macierz funkcji Analyser 306b/vna/J z priorytetami, źródłami i kryteriami zgodności; sprawdzić uwzględnienie wszystkich funkcji i modeli z dokumentacji oraz zasobów (`feature-model-matrix.md`, `reviews/2026-11-07-stage-1-5-feature-model-matrix.md`).
+- [x] 1.6 Ustalić kontrakt protokołu wariantu użytkownika: port, komendy trybów, DDS, kodowanie ADC i timeouty; zweryfikować zapisem transmisji lub udokumentowaną analizą kodu oraz oznaczyć brak potwierdzenia sprzętowego, jeśli go nie ma (`reviews/2026-11-07-stage-1-6-protocol-contract.md`).
 - [ ] 1.7 Zebrać wektory referencyjne i ustalić tolerancje obliczeń oraz geometrii wykresów; dowód: wersjonowane próbki, oczekiwane wyniki, pochodzenie i kryteria oceny.
-- [ ] 1.8 Zinwentaryzować licencje źródeł i zależności oraz warunki publikacji; dowód: dokument z warunkami i zakresem możliwej dystrybucji.
+- [x] 1.7a Zinwentaryzować istniejące wektory COM9, analityczne i screenshotowe wraz z tolerancjami testowymi oraz jawnie rozdzielić je od brakujących oracle fizycznych i pikselowych (`reference-vectors-and-tolerances.md`, `reviews/2026-11-07-stage-1-7a-vector-audit.md`).
+- [ ] 1.8 Zinwentaryzować licencje źródeł i zależności oraz warunki publikacji; dowód: dokument z warunkami i zakresem możliwej dystrybucji. Podzadanie 1.8a zapisuje tylko dostarczone notice i brak ustalenia dokładnego zakresu dla JAR-a.
+- [x] 1.8a Zanotować treść dołączonego `lizenz.html`, sprawdzić indeks wpisów JAR oraz wyznaczyć granicę pakowania: nie dołączać JAR-a ani dekompilacji do release VNA Studio, dopóki licencja programu i zależności nie są ustalone (`reviews/2026-11-07-stage-1-8a-vnaj-license-inventory.md`; raport w `../../../../VNA-ReverseEngineering/analysis/vnaj-3.4.8-javap-static-review-2026-11-07.md`).
 
 ## 2. Fundament C# i obliczenia
 
@@ -19,7 +22,7 @@
 - [x] 2.1d Usunąć zależność okna od generowanych nazw XAML i ostrzeżenie AVLN3001; sprawdzić oba konstruktory testami oraz uruchomić okno na pulpicie Windows. Dowód: `reviews/2026-11-03-xaml-startup.md`.
 - [x] 2.2a Załadować profil 65 MHz z bundlowanego INI przez typed options; uwzględnić zakres, zegar DDS, próbki, rozdzielczości ADC i zachować współczynniki kalibracji.
 - [x] 2.2c Wyświetlać nazwę profilu `VNA 1-65 MHz`, zgodnie z oznaczeniem urządzenia na zdjęciach użytkownika, zachowując identyfikator profilu dla wcześniejszych sesji; aktualizować podglądy.
-- [ ] 2.2b Zweryfikować przeliczenia Hz/MHz, walidację zakresu i zgodność wszystkich wartości profilu z INI.
+- [x] 2.2b Zweryfikować przeliczenia Hz/MHz, walidację zakresu i zgodność wszystkich wartości profilu z INI (`reviews/2026-11-07-stage-2-2b-profile-match.md`).
 - [x] 2.3a Dodać niezależny od UI kalkulator z podpisanego return loss i fazy na SWR oraz impedancję zespoloną; użyć go w demonstratorze.
 - [ ] 2.3b Potwierdzić konwencje z kodem/odczytami 306b, dodać kalibrację z INI i sprawdzić wektory 50 Ω, OPEN, SHORT, granice zakresów oraz osobliwości.
 - [x] 2.4a Udokumentować standardowe wzory kalkulatora C#, znaki R/X i jawne założenie konwencji fazy.
@@ -44,21 +47,22 @@
 - [x] 4.2c Włączyć zmianę rozmiaru okna z minimum 1024×768 DIP; użyć elastycznego obszaru wykresu, przewijanego panelu ustawień i geometrii liczonej z aktualnych `Bounds`.
 - [x] 4.2d Wydzielić wspólne definicje liniowych skal dla krzywych i etykiet oraz geometrię segmentów bez zależności od Avalonia; sprawdzić pozycje krańców i etykiet testami.
 - [x] 4.3a Dodać markery M1/M2 z odczytem tej samej próbki, znacznik minimum SWR, zoom między markerami i powrót do pełnego zakresu.
-- [ ] 4.3b Sprawdzić scenariusze `legacy-plots`, w tym odwróconą kolejność markerów oraz brak poprawnych próbek.
+- [x] 4.3b Sprawdzić scenariusze `legacy-plots`, w tym odwróconą kolejność markerów oraz brak poprawnych próbek (`reviews/2026-11-07-stage-4-3b-legacy-plot-edge-cases.md`).
 - [x] 4.3c Dodać przeciąganie M1/M2 z przechwytywaniem wskaźnika, wybór próbek w widocznym zakresie i historię zoomu; sprawdzić odwróconą kolejność markerów, powrót przez kolejne zakresy i brak pozornego minimum SWR.
 - [x] 4.3d Dodać przyciski i klawisze +/− do dwukrotnego zoomu częstotliwości, wspólną historię, granice 1 Hz/profilu oraz zachowanie widoku przy kolejnych skanach tych samych ustawień. Dowód: `reviews/2026-11-05-plot-zoom.md`, testy ViewModel i rzeczywistych interakcji headless w 1024x768.
-- [ ] 4.4 Obsłużyć luki w danych oraz DPI 100/125/150%; sprawdzić przerwy krzywych, trafianie w próbki, porównania obrazów i responsywność na 649 punktach na przebieg.
+- [ ] 4.4 Obsłużyć luki w danych oraz DPI 100/125/150%; sprawdzić przerwy krzywych, trafianie w próbki, porównania obrazów i responsywność na 649 punktach na przebieg. Testy DPI, responsywność oraz porównanie strukturalne są wykonane; pozostaje pixel parity na dopasowanych próbkach/original runtime.
 - [x] 4.4a Sprawdzić przerwy dla `null`, NaN, nieskończoności i błędnej jakości; uruchomić testy interakcji headless w konfiguracjach 1024×768/100%, 1440×900/125% oraz 1920×1080/150%.
-- [ ] 4.4b Przejrzeć UI w minimalnym, przywróconym i zmaksymalizowanym oknie; sprawdzić, że osie, markery, etykiety i panel ustawień pozostają dostępne.
-- [ ] 4.5 Zapisać wynik porównania kontrolki Avalonia z kryteriami, pomiary responsywności oraz instrukcję obsługi wykresów; sprawdzić zgodność opisu z działającym prototypem.
+- [x] 4.4b Przejrzeć UI w minimalnym, przywróconym i zmaksymalizowanym oknie; sprawdzić, że osie, markery, etykiety i panel ustawień pozostają dostępne (`reviews/2026-11-07-stage-4-4b-window-layout.md`).
+- [x] 4.4c Porównać dostarczony oryginalny zrzut z rendererem Avalonia i zapisać zgodne elementy, różnice układu oraz ograniczenia porównania danych (`docs/PLOT-COMPARISON.md`, `docs/PLOT-COMPARISON.pl.md`, `reviews/2026-11-07-stage-4-4c-structural-plot-comparison.md`).
+- [x] 4.5 Zapisać wynik porównania kontrolki Avalonia z kryteriami, pomiary responsywności oraz instrukcję obsługi wykresów; sprawdzić zgodność opisu z działającym prototypem (`docs/PLOT-GUIDE.md`, `docs/PLOT-GUIDE.pl.md`, `PLOTS.md`, `reviews/2026-11-07-stage-4-5-plot-guide-performance.md`).
 
 ## 5. Połączenie z urządzeniem
 
 - [x] 5.1a Dodać ustawienie nazwy/ścieżki portu, zapis w konfiguracji użytkownika, wykrywanie nazw portów systemowych oraz przekazywanie wybranej wartości bez zmian do interfejsu urządzenia.
 - [x] 5.1b Dodać surowy transport szeregowy z parametrami linii wymaganymi jawnie, odczytem fragmentowanym, timeoutem i anulowaniem.
-- [ ] 5.1c Dodać symulator ramek według potwierdzonego kontraktu z 1.6; sprawdzić timeout, nadmiarowe bajty, przerwanie i utratę połączenia.
-- [ ] 5.2 Zaimplementować pierwszy sterownik z konfigurowalnym zegarem DDS; porównać wysyłane ramki i dekodowane ADC z zapisami referencyjnymi.
-- [ ] 5.3 Podłączyć skany pojedyncze i ciągłe do UI; wykorzystać konfigurowalną ścieżkę portu, walidować parametry, zatrzymanie i ponowne połączenie bez restartu.
+- [x] 5.1c Dodać offline'owy symulator transportu testujący fragmentację, timeout, nadmiarowe bajty, anulowanie i uciętą ramkę; granice potwierdzonego kontraktu oraz brak weryfikacji dodatkowych bajtów firmware opisać (`docs/DEVICE-PROTOCOL.md`, `reviews/2026-11-07-stage-5-1c-stream-simulator.md`).
+- [x] 5.2 Zaimplementować sterownik z konfigurowalnym zegarem DDS; porównać komendy i dekodowane ADC z zapisami i wektorami (`docs/DEVICE-PROTOCOL.md`, `reviews/2026-11-07-stage-5-2-5-3-source-flow.md`).
+- [x] 5.3 Podłączyć skany pojedyncze i ciągłe do UI; wykorzystać konfigurowalną ścieżkę portu, walidować parametry, zatrzymać skan i wykazać ponowne połączenie bez restartu (`reviews/2026-11-04-hardware-com9.md`, `reviews/2026-11-07-stage-5-2-5-3-source-flow.md`).
 - [ ] 5.4 Wykonać porównawcze pomiary wzorców i tego samego obiektu w obu aplikacjach; dostarczyć raport wyników i zakres potwierdzonej zgodności sprzętowej.
 - [ ] 5.5 Udokumentować podłączenie, profil urządzenia i procedurę kalibracji; sprawdzić kroki na docelowym egzemplarzu.
 
@@ -91,6 +95,7 @@
 - [x] 9.4 Sprawdzić skrypty lokalnie i rzeczywistą paczkę win-x64; zapisać instrukcję oraz przegląd w `reviews/2026-11-03-release.md`.
 - [x] 9.5 Rozszerzyć macierz o Windows x86, Linux ARM i trzy warianty musl; sprawdzić publikacje nowych RID, zależności natywne i 140 testów w procesie x86. Dowód i ograniczenia: `reviews/2026-11-05-release-rids.md`.
 - [ ] 9.6 Uruchomić workflow w docelowym GitHub, sprawdzić jedenaście wyników i pobieranie załączników; potwierdzić uruchomienie na platformach docelowych.
+- [x] 9.6a Lokalnie sprawdzić walidatory macierzy RID, wersjonowania i manifestów bez publikowania do GitHub (`tests/release/Release.Tests.ps1`, `reviews/2026-11-07-stage-9-6a-release-validation.md`).
 
 ## 10. Motywy aplikacji
 
@@ -108,7 +113,11 @@ Kolejność i kryteria: `roadmap-screenshots.md`. Identyfikatory C/U/R/A/K/M/F o
 - [x] 11.2a E0: Zindeksować lokalne EXE/INI, manual, FTDI package, zrzuty i recoverability; potwierdzić ślady Xc/Xl i udokumentować granice pewności/nieobecność protokołu. Dowód: `reviews/2026-11-04-e0-source-review.md`.
 - [x] 11.2c E0: Odzyskać dedykowany handler zmiany trybu z istniejącej bazy Ghidra; potwierdzić nazwy trybów i komunikat wyłączający stan CAL przy zmianie, bez dopisywania nieodzyskanej matematyki. Dowód: `reviews/2026-11-04-targeted-mode-handler.md`.
 - [x] 11.2d E0: Odzyskać handler kalibracji/odświeżania wykresu; udokumentować komunikat LOOP, zakończenie `0dB` i widoczne skale RL bez zgadywania korekcji. Dowód: `reviews/2026-11-04-targeted-calibration-handler.md`.
-- [ ] 11.2b E0: Potwierdzić algorytm Q legacy, pozostałe profile ticków oraz wyjaśnić Bands `F/F` na podstawie formularza/eventów lub oryginału (U07, A02, U12).
+- [ ] 11.2b E0: Domknąć źródłową analizę XTAL/Q, zakresowych profili ticków i Bands `F/F`; podzadania rozdzielają ustalony ręczny wzór od nierozpoznanego zachowania UI (U07, A02, U12; [`analyser306b-source-gaps-2026-11-07.md`](../../../../VNA-ReverseEngineering/analysis/analyser306b-source-gaps-2026-11-07.md)).
+- [x] 11.2b.1 Potwierdzić, że instrukcje dokumentują ręczne `Q = Fres / (Fh − Fl)` i mówią, że automatyczny XTAL nie był jeszcze zaprogramowany; odróżnić pomocnik VNA Studio od portu automatyki (`reviews/2026-11-07-stage-11-2b-source-audit.md`).
+- [ ] 11.2b.2 Odtworzyć profile podziałek dla wszystkich zakresów z handlera wykresu lub wzorcowych odczytów; etykiety i screenshoty same nie wystarczają.
+- [ ] 11.2b.3 Wyjaśnić rolę Bands `F/F` i powiązanie checkboxa z ograniczeniami `BANDS_LIMIT` na podstawie formularza/eventu lub obserwacji oryginału.
+- [x] 11.2b.4 Statycznie potwierdzić dwa zestawy etykiet RL w zachowanym disassembly `VB6_0043094f`, bez przypisywania gałęzi do `RL×2`, `F/F` ani pasma częstotliwości (`reviews/2026-11-07-stage-11-2b-4-rl-label-branches.md`).
 - [ ] 11.3 E0: Zamknąć kontrakt protokołu i mapę zdolności odbicie/transmisja/generator oraz zapisy referencyjne, powiązane z 1.6.
 - [x] 11.3a E2: Dodać źródłowo oparty transportowy sterownik miniVNA/306b: COM 115200 8N1, komendy tekstowe DDS, ustawiany z INI rozmiar ramki 4/6 bajtów, dekodowanie dwóch potwierdzonych kanałów, timeout i zerwanie po niepełnym skanie. Dowód: `docs/DEVICE-PROTOCOL.md`, `reviews/2026-11-04-serial-driver.md`; bez deklaracji testu na sprzęcie.
 - [x] 11.3b E2: Walidować częstotliwości skanu względem siatki DDS faktycznie zwracanej przez wybrane źródło, tak aby poprawny ostatni punkt poniżej Stop nie odrzucał pełnego skanu. Test integracyjny VM + sterownik + atrapowy COM. Dowód: `reviews/2026-11-04-dds-frequency-grid.md`.
@@ -136,7 +145,7 @@ Kolejność i kryteria: `roadmap-screenshots.md`. Identyfikatory C/U/R/A/K/M/F o
 - [x] 11.8 E1: Dodać szerokość pasma jako bezwzględną różnicę częstotliwości markerów, niezależną od kolejności; wyświetlić MHz i sprawdzić obliczenie testem. Dowód: `reviews/2026-11-04-bandwidth.md` (A01).
 - [x] 11.9a E1: Dodać zlokalizowane menu Plik/Pomoc, operacje otwarcia/zapisu sesji i CSV oraz okno About z VNA Studio, SQ7MRU, wersją assembly i informacją o statusie obsługi sprzętu. Dowód: `reviews/2026-11-04-file-about.md` (F03).
 - [x] 11.9b E1: Pokazać nazwę bieżącej sesji oraz stan pomiaru niezapisanego po zakończeniu skanu; otwarcie/zapis aktualizują nazwę i czyszczą stan niezapisany. Dowód: `reviews/2026-11-04-file-about.md` (F01).
-- [ ] 11.10 E2: Dodać źródła Demonstrator/Urządzenie/Odtwarzanie i właściwy sterownik, Połącz/Rozłącz oraz brak automatycznego fallbacku do demo (C01, M01).
+- [x] 11.10 E2: Dodać źródła Demonstrator/Urządzenie/Odtwarzanie i sterownik profilu, Połącz/Rozłącz oraz brak automatycznego fallbacku do demo; potwierdzić testami i raportem (`reviews/2026-11-04-device-selection.md`, `../device-plugin-architecture/reviews/2026-11-07-stage-3-4-source-lifecycle.md`, `reviews/2026-11-07-stage-5-2-5-3-source-flow.md`).
 - [x] 11.10a E2: Zaimplementować osobny `IVnaDevice` dla protokołu COM i testować go przez wstrzykiwany transport, bez zmiany źródła UI z demonstratora. Dowód: `reviews/2026-11-04-serial-driver.md`.
 - [x] 11.10b E2: Jawnie wybierać Demonstrator albo Urządzenie, zapisywać wybór w ustawieniach, dodawać Połącz/Rozłącz i blokować zmianę źródła/portu podczas pracy; błędy sprzętu nie przełączają na demonstrator. Ręczne połączenie pozostaje aktywne po pełnym skanie. Dowód: `reviews/2026-11-04-device-selection.md`.
 - [x] 11.10c E2: Dodać Odtwarzanie jako odrębne źródło: połączenie wymaga wczytanej zgodnej sesji, ponowny sweep wymaga dokładnego zapisanego zakresu i liczby punktów, a wartości są zwracane bez interpolacji. Zapisać źródło w settings i umożliwić PL/EN. Dowód: `reviews/2026-11-04-session-playback-source.md`.
@@ -144,7 +153,9 @@ Kolejność i kryteria: `roadmap-screenshots.md`. Identyfikatory C/U/R/A/K/M/F o
 - [x] 11.11a E1: Pokazać licznik próbek skanu, pasek postępu podczas akwizycji i czas ostatniego pełnego skanu; próbki bieżącego skanu zatwierdzać do wykresu dopiero po kompletnym, uporządkowanym wyniku. Nie nadpisywać danych ani czasu wynikiem przerwanym lub błędnym. Dowód: `reviews/2026-11-04-scan-progress.md` (C03).
 - [x] 11.11c E1: Dodać single/continuous nad `IVnaDevice`, przełącznik Hold zatrzymujący pętlę po bieżącym pełnym skanie oraz Stop/anulowanie zachowujące ostatni kompletny wynik; pauza między sweepami respektuje `CancellationToken`. Nie deklarować sprzętowego timeoutu ani reconnect. Dowód: `reviews/2026-11-04-continuous-hold.md`.
 - [x] 11.11d E1: Dopasować Hold do odzyskanej instrukcji użytkowej: zaznaczenie wstrzymuje pętlę po pełnym sweepie, odznaczenie samo rozpoczyna/wznawia pomiary ciągłe; Start pozostaje skanem jednorazowym, Stop ustawia Hold i anuluje bieżący skan. PL/EN, test UI command i README. Dowód: `reviews/2026-11-04-legacy-hold-toggle.md`.
-- [ ] 11.11b E2: Dodać protokołowe timeouty akwizycji, odzyskiwanie niepełnej ramki i ponowne połączenie po potwierdzeniu cyklu komunikacji urządzenia (C02).
+- [ ] 11.11b E2: Domknąć timeout, odrzucanie niepełnej ramki i reconnect dla cyklu komunikacji urządzenia (C02); implementacja i symulacja są gotowe, lecz test timeoutu na dokładnym firmware pozostaje otwarty.
+- [x] 11.11b.1 Zaimplementować i testować offline zamknięcie/odrzucenie sweepu po timeout lub uciętej ramce oraz wymagać nowego połączenia przed kolejnym skanem (`tests/Vna.Tests/MiniVnaSerialDeviceTests.cs`, `reviews/2026-11-07-stage-11-11b-1-timeout-recovery.md`).
+- [ ] 11.11b.2 Potwierdzić zachowanie timeoutu i ponownego skanu na dokładnym firmware/profilu VNA; wymaga testu fizycznego, nie wykonanego w tym etapie.
 - [x] 11.12a E2: Dodać czystą korektę afiniczną `y=ax+b` do już przeskalowanego, podpisanego RL/fazy; dekodowanie ADC i RL_OFFSET pozostawić protokołowi po potwierdzeniu. Dowód: `reviews/2026-11-04-adc-calibration.md`.
 - [ ] 11.12 E2: Zastosować zweryfikowaną kalibrację odbicia i sprawdzić wzorce 50 Ω/OPEN/SHORT oraz znane obciążenie (K01, M01, zadanie 2.3b).
 - [ ] 11.13 E3: Dodać FILTER z osobnymi wielkościami transmisji, kalibracją Through/LOOP, offsetem i potwierdzonym zakresem dB/RL×2 (M02, K01–K02).
@@ -160,12 +171,14 @@ Kolejność i kryteria: `roadmap-screenshots.md`. Identyfikatory C/U/R/A/K/M/F o
 - [x] 11.19a E5: Dodać własny eksport CSV z jednostkami, invariant numeric format, pustymi kolumnami dla brakujących wartości i obsługą anulowania. Dowód: `reviews/2026-11-04-csv-export.md`.
 - [x] 11.19b E5: Podnieść format sesji do v2, zachować odczyt/migrację v1 do Antenna i zapisywać wybrany tryb analizy; zablokować zapis/CSV dla trybów bez właściwego źródła danych. Dowód: `reviews/2026-11-04-session-v2.md`.
 - [ ] 11.19c E5: Zbadać binarny format .vec oraz zweryfikować warianty legacy CSV na rzeczywistych plikach przed deklaracją zgodności.
+- [x] 11.19c.1 Zmapować wyłącznie odzyskane skojarzenia procedur dialogów zapisu/odczytu `.vec`, rozdzielić Analyser 306b od miniVNA230 i zanotować brak przykładowych plików/gramatyki (`../../../../VNA-ReverseEngineering/inventory/decompilation-function-map-2026-11-06.md`, `../../../../VNA-ReverseEngineering/inventory/software-artifact-index-2026-11-06.md`, `reviews/2026-11-07-stage-11-19c-1-vec-static-audit.md`).
 - [x] 11.19d E5: Dodać import CSV VNA Studio oraz rozpoznanego nagłówka Analyser 306b (Frequency/Return Loss, opcjonalnie Phase) bez dopowiadania brakujących wielkości. Sprawdzić import, eksport i równomierny sweep testami. Dowód: reviews/2026-11-04-csv-import.md.
 - [x] 11.19e E5: Zachować rzeczywistą, nieinkluzywną siatkę DDS w sesji i odtwarzaniu; walidować rosnące próbki wewnątrz zapisanego zakresu zamiast wymuszać równomierny sweep z punktem Stop. Test round-trip sprzętowej siatki 1/2/3 MHz dla zakresu 1–4 MHz. Dowód: `reviews/2026-11-04-dds-session-roundtrip.md`.
 - [ ] 11.20 E5: Przejść kryteria liczbowej i wizualnej zgodności z roadmapy, PL/EN, trzy motywy, minimum/przywrócenie/maksymalizacja i DPI; zapisać osobne wyniki sprzętowe oraz przegląd etapu.
 - [x] 11.20a E5: Odświeżyć sześć README PNG po zmianach źródeł i zakresu skanu przez test renderujący Avalonia/Skia, skontrolować obraz 1440×900 i potwierdzić opis demonstracyjnych danych. Pełne porównanie geometrii z oryginałem pozostaje w 11.20.
 - [x] 11.21 E1: Dodać pasek wyboru sześciu trybów i kontekstowe grupy kontrolek; ukryć sterowanie specyficzne dla Antenna w pozostałych trybach i pokazać objaśnienie braku potwierdzonego źródła danych, bez prezentowania demonstracyjnego wykresu jako wyniku innego trybu. Dowód: `reviews/2026-11-04-analysis-modes.md` (U11).
-- [ ] 11.22 E0: Wyjaśnić oznaczenie Bands `F/F` na podstawie formularza/eventów lub oryginału (U12). Presety HF/VHF są w 11.7b, a Hold nad cyklem akwizycji w 11.11c; nie rozszerzać zakresu profilu.
+- [ ] 11.22 E0: Wyjaśnić oznaczenie Bands `F/F` na podstawie formularza/eventów lub oryginału (U12); bieżący przegląd potwierdził nazwy kontrolek i klucze w binarium, ale dostarczony INI nie ma wartości `BANDS_LIMIT`, a semantyka `F/F` pozostaje nieznana ([`analyser306b-source-gaps-2026-11-07.md`](../../../../VNA-ReverseEngineering/analysis/analyser306b-source-gaps-2026-11-07.md)). Presety HF/VHF są w 11.7b, a Hold nad cyklem akwizycji w 11.11c; nie rozszerzać zakresu profilu.
+- [x] 11.22.1 Zinwentaryzować z zachowanych odwołań statycznych surowe klucze konfiguracji pasm (`F_M...`); nie przypisywać im jednostek ani semantyki `F/F` bez dalszych dowodów. Review: `reviews/2026-11-07-stage-11-22-1-band-key-inventory.md`.
 
 ## 12. Katalog projektu i czytelność ustawień
 

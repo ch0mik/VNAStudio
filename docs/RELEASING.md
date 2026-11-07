@@ -26,7 +26,7 @@ Dwunasty załącznik, `SHA256SUMS.txt`, zawiera sumy SHA-256 wszystkich jedenast
 
 Macierz obejmuje warianty desktopowe mające runtime .NET 10 oraz natywne biblioteki używanych pakietów SkiaSharp, HarfBuzzSharp i System.IO.Ports. Sam wpis w grafie RID nie wystarcza do dodania platformy. `win-x86` to aplikacja 32-bitowa dla systemów obsługiwanych przez .NET 10; nie oznacza zgodności z dawnymi Windows XP/7. Warianty `linux-musl-*` są przeznaczone dla systemów z musl, np. Alpine, i wymagają systemowych zależności okienkowych oraz fontconfig. Dostępność plików natywnych nie zastępuje próby uruchomienia na docelowej dystrybucji.
 
-Każda paczka zawiera własny runtime .NET (`--self-contained true`), biblioteki dla wybranego RID, profil `Assets/analyser306b-65mhz.ini`, polskie zasoby `.resx` w bibliotece satelitarnej oraz angielskie zasoby neutralne. Zależności okienkowe systemu operacyjnego nadal muszą być dostępne. Włączono apphost; wyłączono trimming i single-file. Ustawienia użytkownika nie są dołączane do paczek.
+Każda paczka zawiera własny runtime .NET (`--self-contained true`), biblioteki dla wybranego RID, assembly pluginu `Vna.Device.Vna65MHz.dll`, profil `Assets/analyser306b-65mhz.ini`, polskie zasoby `.resx` w bibliotece satelitarnej oraz angielskie zasoby neutralne. Walidator publikacji wymaga assembly pluginu, pliku profilu, zasobów językowych oraz bibliotek RID przed utworzeniem archiwum. Zależności okienkowe systemu operacyjnego nadal muszą być dostępne. Włączono apphost; wyłączono trimming i single-file. Ustawienia użytkownika nie są dołączane do paczek.
 
 Tag `v1.2.3` ustawia `Version=1.2.3`, `AssemblyVersion=1.2.3.0` i `FileVersion=1.2.3.0`. `release-info.json` zawiera tag, wersję, RID oraz informację o runtime. Komponenty wersji muszą mieścić się w zakresie 0–65534 wymaganym przez wybrane wersjonowanie assembly.
 
@@ -34,7 +34,7 @@ Tag `v1.2.3` ustawia `Version=1.2.3`, `AssemblyVersion=1.2.3.0` i `FileVersion=1
 
 1. Walidacja taga.
 2. Jedenaście jobów macierzy uruchamia sprawdzenia skryptów i testy aplikacji na swoim runnerze.
-3. `dotnet publish` przygotowuje wariant RID. Walidator sprawdza runtime, RID w `.deps.json`, wersję assembly, profil, zasoby językowe oraz wymagane biblioteki natywne; dla Windows sprawdza także architekturę PE apphost, coreclr, SkiaSharp i HarfBuzzSharp. Następnie tworzy archiwum i jego sumę kontrolną.
+3. `dotnet publish` przygotowuje wariant RID. Przed zapakowaniem każdego RID walidator sprawdza runtime, RID w `.deps.json`, wersję assembly, assembly i zasób pluginu, profil, zasoby językowe oraz wymagane biblioteki natywne; dla Windows sprawdza także architekturę PE apphost, coreclr, SkiaSharp i HarfBuzzSharp. Następnie tworzy archiwum i jego sumę kontrolną.
 4. Osobny job czeka na powodzenie całej macierzy, pobiera paczki i weryfikuje kompletność, nazwy oraz hashe.
 5. `gh release upload` dodaje jedenaście archiwów i wspólny manifest do istniejącego release. Ponowienie workflow zastępuje wygenerowane załączniki o tych samych nazwach (`--clobber`).
 

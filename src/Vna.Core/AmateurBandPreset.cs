@@ -6,6 +6,9 @@ public sealed record AmateurBandPreset(string Name, AmateurBandGroup Group, long
 {
     public bool Fits(DeviceProfile profile) =>
         StartFrequencyHz >= profile.MinimumFrequencyHz && StopFrequencyHz <= profile.MaximumFrequencyHz;
+
+    public bool Fits(DeviceProfileDescriptor profile) =>
+        StartFrequencyHz >= profile.MinimumFrequencyHz && StopFrequencyHz <= profile.MaximumFrequencyHz;
 }
 
 /// <summary>Polish amateur category 3 allocations used only as sweep range shortcuts.</summary>

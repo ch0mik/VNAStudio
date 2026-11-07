@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>Vna.Device.Vna65MHz</AssemblyName>
+    <RootNamespace>Vna.Device.Vna65MHz</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Vna.Core\Vna.Core.csproj" />
+    <ProjectReference Include="..\Vna.Localization\Vna.Localization.csproj" />
+    <ProjectReference Include="..\Vna.Devices.Transport\Vna.Devices.Transport.csproj" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Options" Version="10.0.0" />
+  </ItemGroup>
+</Project>

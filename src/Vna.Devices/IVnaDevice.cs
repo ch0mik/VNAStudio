@@ -13,6 +13,10 @@ public interface IVnaDevice : IAsyncDisposable
 {
     DeviceProfile Profile { get; }
     string DataSourceName { get; }
+    /// <summary>Actual configured reflection processing, when the selected source can report it; null means unknown.</summary>
+    MeasurementAdjustmentSnapshot? AppliedReflectionCalibration => null;
+    /// <summary>Plugin identity for session provenance; null for synthetic or unidentified sources.</summary>
+    string? DevicePluginId => null;
     /// <summary>Returns the frequency grid that this source is expected to emit for a sweep.</summary>
     long GetSampleFrequencyHz(SweepSettings settings, int index) => settings.FrequencyAt(index);
     ValueTask ConnectAsync(DeviceConnectionOptions options, CancellationToken cancellationToken = default);

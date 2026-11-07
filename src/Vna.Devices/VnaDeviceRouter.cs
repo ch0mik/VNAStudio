@@ -29,6 +29,8 @@ public sealed class VnaDeviceRouter : IVnaDevice, IDeviceSourceSelector, ISessio
     public DeviceSourceMode SourceMode { get; private set; }
     public DeviceProfile Profile => CurrentDevice.Profile;
     public string DataSourceName => CurrentDevice.DataSourceName;
+    public MeasurementAdjustmentSnapshot? AppliedReflectionCalibration => CurrentDevice.AppliedReflectionCalibration;
+    public string? DevicePluginId => CurrentDevice.DevicePluginId;
     public long GetSampleFrequencyHz(SweepSettings settings, int index) =>
         (_connectedDevice ?? CurrentDevice).GetSampleFrequencyHz(settings, index);
 

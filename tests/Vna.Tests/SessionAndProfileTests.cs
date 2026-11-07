@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Vna.App.Plotting;
 using Vna.Core;
+using Vna.Device.Vna65MHz;
 using Vna.IO;
 using Xunit;
 
@@ -39,7 +40,7 @@ public sealed class SessionAndProfileTests
         services.Configure<LegacyAnalyzIniOptions>(config);
         using var provider = services.BuildServiceProvider();
         var profile = LegacyAnalyzIniProfileFactory.Create(provider.GetRequiredService<IOptions<LegacyAnalyzIniOptions>>().Value);
-        var expected = DeviceProfile.Vna65MHz;
+        var expected = Vna65MHzDeviceProfile.Default;
         Assert.Equal("VNA 1-65 MHz", profile.DisplayName);
         Assert.Equal(1_000_000, profile.MinimumFrequencyHz);
         Assert.Equal(65_000_000, profile.MaximumFrequencyHz);
@@ -66,11 +67,11 @@ public sealed class SessionAndProfileTests
     [Fact]
     public void ProfileAcceptsInclusiveIniFrequencyLimitsAndRejectsOutOfRangeSweeps()
     {
-        new SweepSettings(1_000_000, 65_000_000, 649).ValidateAgainst(DeviceProfile.Vna65MHz);
+        new SweepSettings(1_000_000, 65_000_000, 649).ValidateAgainst(Vna65MHzDeviceProfile.Default);
         Assert.Throws<ArgumentOutOfRangeException>(() =>
-            new SweepSettings(999_999, 65_000_000, 649).ValidateAgainst(DeviceProfile.Vna65MHz));
+            new SweepSettings(999_999, 65_000_000, 649).ValidateAgainst(Vna65MHzDeviceProfile.Default));
         Assert.Throws<ArgumentOutOfRangeException>(() =>
-            new SweepSettings(1_000_000, 65_000_001, 649).ValidateAgainst(DeviceProfile.Vna65MHz));
+            new SweepSettings(1_000_000, 65_000_001, 649).ValidateAgainst(Vna65MHzDeviceProfile.Default));
     }
 
     [Fact]
@@ -139,9 +140,9 @@ public sealed class SessionAndProfileTests
     [Fact]
     public void ScaledReadingsUseIniAffineCalibrationBeforeRfDerivation()
     {
-        var profile = DeviceProfile.Vna65MHz with
+        var profile = Vna65MHzDeviceProfile.Default with
         {
-            LegacyCalibration = DeviceProfile.Vna65MHz.LegacyCalibration with
+            LegacyCalibration = Vna65MHzDeviceProfile.Default.LegacyCalibration with
             {
                 ReturnLossA = 2,
                 ReturnLossB = -3,
@@ -150,7 +151,8 @@ public sealed class SessionAndProfileTests
             },
         };
 
-        var point = RfSampleCalculator.FromScaledReadings(14_100_000, -1.2, 9.5, profile);
+        var point = Vna65MHzRfConverter.FromScaledReadings(14_100_000, -1.2, 9.5,
+            Vna65MHzProtocolSettings.FromLegacyProfile(profile));
 
         Assert.Equal(2 * -1.2 - 3, point.ReturnLossDb!.Value, 12);
         Assert.Equal(3 * 9.5 + 4, point.PhaseDegrees!.Value, 12);
@@ -185,7 +187,7 @@ public sealed class SessionAndProfileTests
 
         await MeasurementCsvFile.SaveAsync(stream, session, TestContext.Current.CancellationToken);
         stream.Position = 0;
-        var loaded = await MeasurementCsvFile.LoadAsync(stream, DeviceProfile.Vna65MHz, TestContext.Current.CancellationToken);
+        var loaded = await MeasurementCsvFile.LoadAsync(stream, Vna65MHzDeviceProfile.Default, TestContext.Current.CancellationToken);
 
         Assert.Equal("VNA Studio CSV", loaded.DataSource);
         Assert.Equal(session.Points.Select(point => point with
@@ -219,7 +221,7 @@ public sealed class SessionAndProfileTests
 
         await MeasurementCsvFile.SaveAsync(stream, original, TestContext.Current.CancellationToken);
         stream.Position = 0;
-        var imported = await MeasurementCsvFile.LoadAsync(stream, DeviceProfile.Vna65MHz, TestContext.Current.CancellationToken);
+        var imported = await MeasurementCsvFile.LoadAsync(stream, Vna65MHzDeviceProfile.Default, TestContext.Current.CancellationToken);
 
         Assert.Equal(SessionAnalysisMode.Filter, imported.AnalysisMode);
         Assert.Equal(original.Points.Select(point => point.TransmissionDb), imported.Points.Select(point => point.TransmissionDb));
@@ -234,7 +236,7 @@ public sealed class SessionAndProfileTests
                            "2000000,1.3,53,-18,1,52,2,Valid\n";
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes(csv));
 
-        var loaded = await MeasurementCsvFile.LoadAsync(stream, DeviceProfile.Vna65MHz, TestContext.Current.CancellationToken);
+        var loaded = await MeasurementCsvFile.LoadAsync(stream, Vna65MHzDeviceProfile.Default, TestContext.Current.CancellationToken);
 
         Assert.Equal(SessionAnalysisMode.Antenna, loaded.AnalysisMode);
         Assert.Equal("VNA Studio CSV", loaded.DataSource);
@@ -247,7 +249,7 @@ public sealed class SessionAndProfileTests
     public async Task ImportsIdentifiedLegacyAnalyserCsvColumnsWithoutInventingMissingValues(string csv, bool hasPhase)
     {
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes(csv));
-        var session = await MeasurementCsvFile.LoadAsync(stream, DeviceProfile.Vna65MHz, TestContext.Current.CancellationToken);
+        var session = await MeasurementCsvFile.LoadAsync(stream, Vna65MHzDeviceProfile.Default, TestContext.Current.CancellationToken);
 
         Assert.Equal("Analyser 306b antenna CSV", session.DataSource);
         Assert.Equal(1_000_000, session.Sweep.StartFrequencyHz);
@@ -270,13 +272,28 @@ public sealed class SessionAndProfileTests
         var loaded = await MeasurementSessionFile.LoadAsync(stream, TestContext.Current.CancellationToken);
         Assert.Equal(MeasurementSessionFile.CurrentFormatVersion, loaded.FormatVersion);
         Assert.Equal(SessionAnalysisMode.Antenna, loaded.AnalysisMode);
-        Assert.Equal(original.ProfileSnapshot! with
-        {
-            GeneratorMemoryFrequenciesHz = loaded.ProfileSnapshot!.GeneratorMemoryFrequenciesHz,
-            LegacyBandPresets = loaded.ProfileSnapshot.LegacyBandPresets,
-        }, loaded.ProfileSnapshot);
-        Assert.Equal(original.ProfileSnapshot!.GeneratorMemoryFrequenciesHz, loaded.ProfileSnapshot!.GeneratorMemoryFrequenciesHz);
-        Assert.Equal(original.ProfileSnapshot!.LegacyBandPresets, loaded.ProfileSnapshot!.LegacyBandPresets);
+        var expectedProfile = original.ProfileSnapshot!;
+        var loadedProfile = loaded.ProfileSnapshot!;
+        Assert.Equal(expectedProfile.Id, loadedProfile.Id);
+        Assert.Equal(expectedProfile.DisplayName, loadedProfile.DisplayName);
+        Assert.Equal(expectedProfile.MinimumFrequencyHz, loadedProfile.MinimumFrequencyHz);
+        Assert.Equal(expectedProfile.MaximumFrequencyHz, loadedProfile.MaximumFrequencyHz);
+        Assert.Equal(expectedProfile.DefaultPointCount, loadedProfile.DefaultPointCount);
+        Assert.Equal(expectedProfile.DdsClockHz, loadedProfile.DdsClockHz);
+        Assert.Equal(expectedProfile.ReferenceImpedanceOhms, loadedProfile.ReferenceImpedanceOhms);
+        Assert.Equal(expectedProfile.MagnitudeAdcDbPerCount, loadedProfile.MagnitudeAdcDbPerCount);
+        Assert.Equal(expectedProfile.PhaseAdcDegreesPerCount, loadedProfile.PhaseAdcDegreesPerCount);
+        Assert.Equal(expectedProfile.LegacyVnaType, loadedProfile.LegacyVnaType);
+        Assert.Equal(expectedProfile.LegacySvna, loadedProfile.LegacySvna);
+        Assert.Equal(expectedProfile.DdsPllPrescaler, loadedProfile.DdsPllPrescaler);
+        Assert.Equal(expectedProfile.StartPauseMilliseconds, loadedProfile.StartPauseMilliseconds);
+        Assert.Equal(expectedProfile.StepPauseMilliseconds, loadedProfile.StepPauseMilliseconds);
+        Assert.Equal(expectedProfile.LegacyCalibration, loadedProfile.LegacyCalibration);
+        Assert.Equal(expectedProfile.PlotColors, loadedProfile.PlotColors);
+        Assert.Equal(expectedProfile.GeneratorMemoryFrequenciesHz, loadedProfile.GeneratorMemoryFrequenciesHz);
+        Assert.Equal(expectedProfile.LegacyBandPresets, loadedProfile.LegacyBandPresets);
+        Assert.Equal(expectedProfile.Capabilities, loadedProfile.Capabilities);
+        Assert.Equal(expectedProfile.Connectors, loadedProfile.Connectors);
         Assert.Equal(original.Sweep, loaded.Sweep);
         Assert.Equal(original.Points.ToArray(), loaded.Points.ToArray());
         Assert.Equal(original.CapturedAtUtc, loaded.CapturedAtUtc);
@@ -329,7 +346,7 @@ public sealed class SessionAndProfileTests
         stream.Position = 0;
         var loaded = await MeasurementSessionFile.LoadAsync(stream, TestContext.Current.CancellationToken);
 
-        Assert.Equal(4, loaded.FormatVersion);
+        Assert.Equal(MeasurementSessionFile.CurrentFormatVersion, loaded.FormatVersion);
         Assert.Equal(SessionAnalysisMode.Filter, loaded.AnalysisMode);
         Assert.Equal(-4.25, loaded.Points[0].TransmissionDb);
         Assert.Null(loaded.Points[0].ReturnLossDb);
@@ -402,7 +419,7 @@ public sealed class SessionAndProfileTests
     [InlineData("band")]
     public async Task SessionRejectsCorruptProfileSnapshot(string field)
     {
-        var profile = DeviceProfile.Vna65MHz;
+        var profile = Vna65MHzDeviceProfile.Default;
         profile = field switch
         {
             "dds" => profile with { DdsClockHz = -1 },

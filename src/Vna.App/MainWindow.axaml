@@ -26,6 +26,7 @@
             <MenuItem Header="{Binding [ExportCsv], Source={x:Static loc:LocalizationService.Instance}}" Click="ExportCsv_OnClick" IsEnabled="{Binding CanSaveSession}" />
           </MenuItem>
           <MenuItem Header="{Binding [MenuHelp], Source={x:Static loc:LocalizationService.Instance}}">
+            <MenuItem Header="{Binding [DeviceProfilesMenu], Source={x:Static loc:LocalizationService.Instance}}" Click="DeviceProfiles_OnClick" />
             <MenuItem Header="{Binding [About], Source={x:Static loc:LocalizationService.Instance}}" Click="About_OnClick" />
           </MenuItem>
         </Menu>        <Border Grid.Column="2" Background="{DynamicResource Vna.BadgeBackground}" BorderBrush="{DynamicResource Vna.BadgeBorder}" BorderThickness="1" CornerRadius="8" Padding="12,8" VerticalAlignment="Center">
@@ -190,7 +191,7 @@
 
       <Grid Grid.Column="1" RowDefinitions="Auto,*,Auto,Auto,Auto" RowSpacing="10">
         <Border Grid.Row="0" Background="{DynamicResource Vna.Surface}" BorderBrush="{DynamicResource Vna.Border}" BorderThickness="1" CornerRadius="12" Padding="6,4">
-          <WrapPanel Orientation="Horizontal">
+          <WrapPanel Orientation="Horizontal" IsEnabled="{Binding !IsScanning}">
             <Button Classes="Ghost" x:Name="AntennaModeButton" Command="{Binding SelectAntennaModeCommand}" Classes.active="{Binding IsAntennaMode}" Content="{Binding [ModeAntenna], Source={x:Static loc:LocalizationService.Instance}}" Foreground="{DynamicResource Vna.TextPrimary}" Margin="4" />
             <Button Classes="Ghost" Command="{Binding SelectCableLossModeCommand}" Classes.active="{Binding IsCableLossMode}" Content="{Binding [ModeCableLoss], Source={x:Static loc:LocalizationService.Instance}}" Foreground="{DynamicResource Vna.TextPrimary}" Margin="4" />
             <Button Classes="Ghost" Command="{Binding SelectCableLengthModeCommand}" Classes.active="{Binding IsCableLengthMode}" Content="{Binding [ModeCableLength], Source={x:Static loc:LocalizationService.Instance}}" Foreground="{DynamicResource Vna.TextPrimary}" Margin="4" />
@@ -227,37 +228,85 @@
                 <Button x:Name="SmithZoomInButton" Classes="Ghost" Content="+" ToolTip.Tip="{Binding [SmithZoomIn], Source={x:Static loc:LocalizationService.Instance}}" Command="{Binding SmithZoomInCommand}" Margin="0,0,4,4" />
                 <Button x:Name="SmithZoomOutButton" Classes="Ghost" Content="−" ToolTip.Tip="{Binding [SmithZoomOut], Source={x:Static loc:LocalizationService.Instance}}" Command="{Binding SmithZoomOutCommand}" Margin="0,0,4,4" />
                 <Button x:Name="SmithResetViewButton" Classes="Ghost" Content="{Binding [SmithResetView], Source={x:Static loc:LocalizationService.Instance}}" Command="{Binding ResetSmithViewCommand}" Margin="0,0,4,4" />
+                <TextBlock Text="{Binding [SmithSwrCircle], Source={x:Static loc:LocalizationService.Instance}}" FontSize="8" Foreground="{DynamicResource Vna.TextMuted}" VerticalAlignment="Center" Margin="8,0,6,4" />
+                <ComboBox SelectedIndex="{Binding SmithSwrCircleModeIndex}" Width="130" Margin="0,0,4,4">
+                  <ComboBoxItem Content="{Binding [SmithSwrOff], Source={x:Static loc:LocalizationService.Instance}}" />
+                  <ComboBoxItem Content="{Binding [SmithSwrFixed], Source={x:Static loc:LocalizationService.Instance}}" />
+                  <ComboBoxItem Content="{Binding [SmithSwrMarker1], Source={x:Static loc:LocalizationService.Instance}}" />
+                </ComboBox>
+                <TextBox Text="{Binding SmithFixedSwrText, UpdateSourceTrigger=PropertyChanged}"
+                         IsEnabled="{Binding IsSmithFixedSwrMode}" Width="72" Watermark="{Binding [SmithSwrFixedHint], Source={x:Static loc:LocalizationService.Instance}}"
+                         ToolTip.Tip="{Binding [SmithSwrFixedHint], Source={x:Static loc:LocalizationService.Instance}}" Margin="0,0,4,4" />
               </WrapPanel>
+              <StackPanel Spacing="3" IsVisible="{Binding IsAntennaMode}">
+                <WrapPanel Orientation="Horizontal">
+                  <TextBlock Text="{Binding [ComparisonSnapshotsTitle], Source={x:Static loc:LocalizationService.Instance}}" FontSize="8" Foreground="{DynamicResource Vna.TextMuted}" VerticalAlignment="Center" Margin="0,0,8,4" />
+                  <TextBox Text="{Binding ComparisonSnapshotName, UpdateSourceTrigger=PropertyChanged}" Width="160" MaxLength="120"
+                           Watermark="{Binding [ComparisonSnapshotNameHint], Source={x:Static loc:LocalizationService.Instance}}" Margin="0,0,4,4" />
+                  <Button Classes="Ghost" Content="{Binding [ComparisonSnapshotCapture], Source={x:Static loc:LocalizationService.Instance}}"
+                          Click="SaveComparisonSnapshot_OnClick" IsEnabled="{Binding CanCaptureComparisonSnapshot}" Margin="0,0,4,4" />
+                  <Button Classes="Ghost" Content="{Binding [ComparisonSnapshotOpen], Source={x:Static loc:LocalizationService.Instance}}"
+                          Click="OpenComparisonSnapshots_OnClick" Margin="0,0,4,4" />
+                  <Button Classes="Ghost" Content="{Binding [ComparisonSnapshotClear], Source={x:Static loc:LocalizationService.Instance}}"
+                          Command="{Binding ClearComparisonSnapshotsCommand}" IsEnabled="{Binding CanClearComparisonSnapshots}" Margin="0,0,4,4" />
+                  <TextBlock Text="{Binding [ComparisonFrequencyTrace], Source={x:Static loc:LocalizationService.Instance}}" FontSize="8" Foreground="{DynamicResource Vna.TextMuted}" VerticalAlignment="Center" Margin="8,0,6,4"
+                             IsVisible="{Binding IsFrequencyChartVisible}" />
+                  <ComboBox ItemsSource="{Binding Traces}" SelectedItem="{Binding SelectedComparisonTraceOption}" Width="145" Margin="0,0,4,4"
+                            IsVisible="{Binding IsFrequencyChartVisible}">
+                    <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding DisplayName}" /></DataTemplate></ComboBox.ItemTemplate>
+                  </ComboBox>
+                </WrapPanel>
+                <ScrollViewer MaxHeight="42" IsVisible="{Binding CanClearComparisonSnapshots}">
+                  <ItemsControl ItemsSource="{Binding ComparisonSnapshots}">
+                    <ItemsControl.ItemsPanel>
+                      <ItemsPanelTemplate><WrapPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,12,2" Spacing="4">
+                          <CheckBox IsChecked="{Binding IsVisible}" VerticalAlignment="Center" />
+                          <Border Width="10" Height="3" Background="{Binding Color}" VerticalAlignment="Center" />
+                          <TextBlock Text="{Binding Name}" ToolTip.Tip="{Binding ProvenanceHint}" FontSize="8" Foreground="{DynamicResource Vna.TextSecondary}" VerticalAlignment="Center" />
+                        </StackPanel>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </ScrollViewer>
+              </StackPanel>
             </StackPanel>
             <Grid Grid.Row="1">
               <Grid IsVisible="{Binding IsSingleChartView}">
-                <plot:VnaPlotControl x:Name="Plot" Points="{Binding PlotPoints}" VisibleTraces="{Binding VisibleTraces}" Palette="{Binding PlotPalette}"
+                <plot:VnaPlotControl x:Name="Plot" Points="{Binding PlotPoints}" ComparisonOverlays="{Binding FrequencyComparisonOverlays}" ComparisonTrace="{Binding ComparisonTrace}"
+                                 VisibleTraces="{Binding VisibleTraces}" Palette="{Binding PlotPalette}"
                                  LanguageCode="{Binding Localizer.LanguageCode}"
                                  Marker1Frequency="{Binding Marker1Frequency}" Marker2Frequency="{Binding Marker2Frequency}"
                                  MinimumSwrFrequency="{Binding MinimumSwrFrequency}" ShowMinimumSwr="{Binding IsMinimumSwrVisible}" Show50OhmReference="{Binding Show50OhmReference}" ReturnLossX2="{Binding ReturnLossX2}"
                                  ShowMarker1="{Binding IsMarker1Visible}" ShowMarker2="{Binding IsMarker2Visible}"
                                  ViewStartHz="{Binding ViewStartHz}" ViewStopHz="{Binding ViewStopHz}"
                                  IsVisible="{Binding IsFrequencyChartVisible}" />
-                <plot:SmithPlotControl x:Name="SmithPlot" Points="{Binding PlotPoints}" ReferenceImpedanceOhms="{Binding SmithReferenceImpedanceOhms}"
+                <plot:SmithPlotControl x:Name="SmithPlot" Points="{Binding PlotPoints}" ComparisonOverlays="{Binding SmithComparisonOverlays}" ReferenceImpedanceOhms="{Binding SmithReferenceImpedanceOhms}"
                                  Palette="{Binding PlotPalette}" LanguageCode="{Binding Localizer.LanguageCode}"
                                  Marker1Frequency="{Binding Marker1Frequency}" Marker2Frequency="{Binding Marker2Frequency}"
                                  ShowMarker1="{Binding IsMarker1Visible}" ShowMarker2="{Binding IsMarker2Visible}"
                                  ViewStartHz="{Binding ViewStartHz}" ViewStopHz="{Binding ViewStopHz}"
+                                 SwrCircleMode="{Binding SelectedSmithSwrCircleMode}" FixedSwr="{Binding SmithFixedSwr}"
                                  Zoom="{Binding SmithZoom}" PanReal="{Binding SmithPanReal}" PanImaginary="{Binding SmithPanImaginary}"
                                  IsVisible="{Binding IsSmithChartVisible}" />
               </Grid>
               <Grid RowDefinitions="*,*" RowSpacing="6" IsVisible="{Binding IsBothChartViews}">
-                <plot:VnaPlotControl x:Name="PlotBoth" Points="{Binding PlotPoints}" VisibleTraces="{Binding VisibleTraces}" Palette="{Binding PlotPalette}"
+                <plot:VnaPlotControl x:Name="PlotBoth" Points="{Binding PlotPoints}" ComparisonOverlays="{Binding FrequencyComparisonOverlays}" ComparisonTrace="{Binding ComparisonTrace}"
+                                 VisibleTraces="{Binding VisibleTraces}" Palette="{Binding PlotPalette}"
                                  LanguageCode="{Binding Localizer.LanguageCode}"
                                  Marker1Frequency="{Binding Marker1Frequency}" Marker2Frequency="{Binding Marker2Frequency}"
                                  MinimumSwrFrequency="{Binding MinimumSwrFrequency}" ShowMinimumSwr="{Binding IsMinimumSwrVisible}" Show50OhmReference="{Binding Show50OhmReference}" ReturnLossX2="{Binding ReturnLossX2}"
                                  ShowMarker1="{Binding IsMarker1Visible}" ShowMarker2="{Binding IsMarker2Visible}"
                                  ViewStartHz="{Binding ViewStartHz}" ViewStopHz="{Binding ViewStopHz}" />
-                <plot:SmithPlotControl x:Name="SmithPlotBoth" Grid.Row="1" Points="{Binding PlotPoints}" ReferenceImpedanceOhms="{Binding SmithReferenceImpedanceOhms}"
+                <plot:SmithPlotControl x:Name="SmithPlotBoth" Grid.Row="1" Points="{Binding PlotPoints}" ComparisonOverlays="{Binding SmithComparisonOverlays}" ReferenceImpedanceOhms="{Binding SmithReferenceImpedanceOhms}"
                                  Palette="{Binding PlotPalette}" LanguageCode="{Binding Localizer.LanguageCode}"
                                  Marker1Frequency="{Binding Marker1Frequency}" Marker2Frequency="{Binding Marker2Frequency}"
                                  ShowMarker1="{Binding IsMarker1Visible}" ShowMarker2="{Binding IsMarker2Visible}"
                                  ViewStartHz="{Binding ViewStartHz}" ViewStopHz="{Binding ViewStopHz}"
+                                 SwrCircleMode="{Binding SelectedSmithSwrCircleMode}" FixedSwr="{Binding SmithFixedSwr}"
                                  Zoom="{Binding SmithZoom}" PanReal="{Binding SmithPanReal}" PanImaginary="{Binding SmithPanImaginary}" />
               </Grid>
             </Grid>

@@ -8,7 +8,7 @@ Docelowo samodzielna aplikacja C# odtwarzająca funkcje vna/J 3.4.8. Pierwszy dz
 
 Zbadano oryginalny pakiet https://download.dl2sba.com/vnaj/3.4.8/ oraz kod https://github.com/pa7n/miniVNA/blob/master/frmmain.pas.
 
-- Oryginał i dokumentacja są w `../reference/vnaj-3.4.8/`.
+- Oryginał i dokumentacja są w `../VNA-ReverseEngineering/reference/vnaj-3.4.8/`.
 - JAR zawiera 656 plików klas; spis: `jar-entries.txt`.
 - Punkt wejścia: `krause.vna.gui.VNAMain`; interfejs Swing, biblioteka szeregowa purejavacomm, biblioteki wykresów i obliczeń w zagnieżdżonych JAR.
 - Widoczne osobne sterowniki m.in. std, std2, pro i pro2 oraz klasy kalibracji i przeliczania próbek.
@@ -59,7 +59,7 @@ Najważniejsze informacje od użytkownika: wersja firmware, dostępność sprzę
 
 ## Ustalenia z pakietu użytkownika — 2026-11-02
 
-Przejrzano lokalne materiały urządzenia przekazane do analizy: instrukcję instalacji, dokumenty pomiarowe, `analyz.ini` i `SETUP.LST`. Tekst PDF zapisano w `../reference/hardware/manual-*.txt`. Nie uruchamiano instalatorów ani programów EXE.
+Przejrzano lokalne materiały urządzenia przekazane do analizy: instrukcję instalacji, dokumenty pomiarowe, `analyz.ini` i `SETUP.LST`. Tekst PDF zapisano w `../VNA-ReverseEngineering/reference/hardware/manual-*.txt`. Nie uruchamiano instalatorów ani programów EXE.
 
 Pakiet wskazuje na konstrukcję VNA z rodziny IW3HEV / modyfikacji SP3SWJ i SP7DPT, obsługiwaną przez Analyser 306b. Nie ustalono dokładnej rewizji sprzętu. Instrukcja nakazuje używać `analyser306b.exe`; miniVNA230 służy jedynie instalacji zależności VB6. Sama obecność miniVNA230 nie identyfikuje sprzętu jako fabrycznego miniVNA Standard.
 
@@ -82,4 +82,4 @@ Pierwszy sterownik C# ma obsługiwać ten wariant 65 MHz, z konfigurowalnym zega
 
 ## Analiza lokalnego oprogramowania VB6
 
-Na żądanie użytkownika wykonano częściową dekompilację Analyser 306b i miniVNA230 z lokalnego pakietu. Oba są PE32 x86 / VB6 native. CAB rozpakowano bez instalowania. Uzyskano pseudokod dla 74/78 i 135/142 wykrytych kandydatów procedur VB6; pozostałe fragmenty zachowano w asemblerze. Wyniki, ograniczenia, skrypty powtórzenia oraz raporty pokrycia są w `../decompiled/README.md`; robocza specyfikacja w `../decompiled/SPEC.md`. Materiały referencyjne i wyniki dekompilacji znajdują się poza katalogiem `VnaStudio`, w katalogu nadrzędnym. To osobny etap względem niezrealizowanej jeszcze dekompilacji Java vna/J.
+Na żądanie użytkownika wykonano częściową dekompilację Analyser 306b i miniVNA230 z lokalnego pakietu. Oba są PE32 x86 / VB6 native. CAB rozpakowano bez instalowania. Uzyskano pseudokod dla 74/78 i 135/142 wykrytych kandydatów procedur VB6; pozostałe fragmenty zachowano w asemblerze. Wyniki, ograniczenia, skrypty powtórzenia oraz raporty pokrycia są w `../VNA-ReverseEngineering/decompiled/README.md`; robocza specyfikacja w `../VNA-ReverseEngineering/decompiled/SPEC.md`. Materiały referencyjne i wyniki dekompilacji znajdują się w sąsiednim katalogu `VNA-ReverseEngineering`, poza repozytorium `VnaStudio`. To osobny etap względem niezrealizowanej jeszcze pełnej dekompilacji Java vna/J; wybrane klasy vna/J przejrzano statycznie systemowym `javap` bez uruchamiania JAR-a.

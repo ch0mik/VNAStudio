@@ -33,16 +33,16 @@ Ustawienia użytkownika są zapisywane w `LocalApplicationData/VnaStudio/setting
 }
 ```
 
-Profil jest odczytywany z `analyz.ini` obok pliku wykonywalnego, jeśli taki plik istnieje; w przeciwnym razie z `Assets/analyser306b-65mhz.ini`. Dawne `RS_address` nie nadpisuje nazwy portu właściwej dla systemu. Profil jest wiązany przez `IOptions<LegacyAnalyzIniOptions>`, a ustawienia użytkownika przez `IOptionsMonitor<AppSettings>`.
+Plik legacy INI jest odczytywany z `analyz.ini` obok pliku wykonywalnego, jeśli istnieje; w przeciwnym razie z `Assets/analyser306b-65mhz.ini`. `IOptions<LegacyAnalyzIniOptions>` zasila `LegacyAnalyzIniProfileFactory`, która tworzy zgodnościowy `DeviceProfile`; następnie `Vna65MHzProtocolSettings.FromLegacyProfile` mapuje ten profil na typowane ustawienia pluginu. Skonfigurowany port pozostaje w `IOptionsMonitor<AppSettings>` i trafia do pluginu w `DeviceConnectionRequest` bez normalizacji.
 
-Parametry transmisji pochodzą z `IOptions<MiniVnaSerialOptions>`. Obecny host aplikacji rejestruje wartości domyślne bez wiązania sekcji serial z JSON. Dopisanie `BaudRate` do settings.json nie zmienia więc aktualnie prędkości transmisji.
+Parametry transmisji pochodzą z `IOptions<Vna65MHzSerialOptions>`. Obecny host aplikacji rejestruje wartości domyślne bez wiązania sekcji serial z JSON. Dopisanie `BaudRate` do `settings.json` nie zmienia więc aktualnie prędkości transmisji.
 
 ## 2. Przebieg jednego skanu
 
 ```mermaid
 sequenceDiagram
     participant UI as MainWindowViewModel
-    participant Driver as MiniVnaSerialDevice
+    participant Driver as Vna65MHzMeasurementSource
     participant Port as SerialPortTransport
     participant VNA
     UI->>Driver: ConnectAsync(port, token), jeśli potrzeba
@@ -221,11 +221,12 @@ Dowody z oryginału obejmują zapisane 115200 w MSComm1 przy offsecie pliku EXE 
 
 | Odpowiedzialność | Plik |
 | --- | --- |
-| Ustawienia i wykrywanie portów | [SerialConnectionSettings](../src/Vna.Devices/Transport/SerialConnectionSettings.cs), [SerialPortCatalog](../src/Vna.Devices/Transport/SerialPortCatalog.cs) |
-| Otwieranie, zapis, odczyt i anulowanie | [SerialPortTransport](../src/Vna.Devices/Transport/SerialPortTransport.cs) |
-| Domyślne parametry przez IOptions | [MiniVnaSerialOptions](../src/Vna.Devices/MiniVnaSerialOptions.cs) |
-| Komendy, DDS, ramki i dekodowanie | [MiniVnaSerialDevice](../src/Vna.Devices/MiniVnaSerialDevice.cs) |
-| Wiązanie INI i profil | [LegacyAnalyzIniProfileFactory](../src/Vna.IO/LegacyAnalyzIniProfileFactory.cs), [DeviceProfile](../src/Vna.Core/DeviceProfile.cs) |
-| Przeliczenie ADC i RF | [RfSampleCalculator](../src/Vna.Core/RfSampleCalculator.cs) |
+| Ustawienia i wykrywanie portów | [SerialConnectionSettings](../src/Vna.Devices.Transport/SerialConnectionSettings.cs), [SerialPortCatalog](../src/Vna.Devices.Transport/SerialPortCatalog.cs) |
+| Otwieranie, zapis, odczyt i anulowanie | [SerialPortTransport](../src/Vna.Devices.Transport/SerialPortTransport.cs) |
+| Domyślne parametry szeregowe przez IOptions | [Vna65MHzSerialOptions](../src/Vna.Device.Vna65MHz/Vna65MHzSerialOptions.cs) |
+| Komendy, DDS, ramki i dekodowanie | [Vna65MHzMeasurementSource](../src/Vna.Device.Vna65MHz/Vna65MHzMeasurementSource.cs) |
+| Wiązanie INI i ustawienia protokołu | [LegacyAnalyzIniProfileFactory](../src/Vna.Device.Vna65MHz/LegacyAnalyzIniProfileFactory.cs), [Vna65MHzProtocolSettings](../src/Vna.Device.Vna65MHz/Vna65MHzProtocolSettings.cs) |
+| Przeliczenie ADC/RF VNA65 | [Vna65MHzRfConverter](../src/Vna.Device.Vna65MHz/Vna65MHzRfConverter.cs); wspólna matematyka impedancji: [RfSampleCalculator](../src/Vna.Core/RfSampleCalculator.cs) |
+| Neutralny kontrakt pluginu | [DevicePluginContracts](../src/Vna.Core/DevicePluginContracts.cs), [DevicePluginCatalog](../src/Vna.Core/DevicePluginCatalog.cs) |
 | Wybór źródła i przebieg skanu | [VnaDeviceRouter](../src/Vna.Devices/VnaDeviceRouter.cs), [MainWindowViewModel](../src/Vna.App/ViewModels/MainWindowViewModel.cs) |
 | Testy regresji | [Testy transmisji](../tests/Vna.Tests/MiniVnaSerialDeviceTests.cs), [Testy ADC](../tests/Vna.Tests/LegacyAdcConversionTests.cs) |

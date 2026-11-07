@@ -17,9 +17,11 @@
   <data name="SourceDemo" xml:space="preserve"><value>Demonstration data</value></data>
   <data name="SourceHardware" xml:space="preserve"><value>VNA hardware</value></data>
   <data name="SourcePlayback" xml:space="preserve"><value>Session playback</value></data>
-  <data name="PlaybackSourceHint" xml:space="preserve"><value>Replays the loaded session at its saved frequency range and point count, without interpolation.</value></data>
-  <data name="PlaybackOpenSessionHint" xml:space="preserve"><value>Open a compatible saved session before connecting playback.</value></data>
+  <data name="PlaybackSourceHint" xml:space="preserve"><value>Replays the selected saved or in-memory session at its original frequency range and point count, without interpolation.</value></data>
+  <data name="PlaybackOpenSessionHint" xml:space="preserve"><value>Open a compatible saved session or complete a scan before connecting playback.</value></data>
+  <data name="SessionProfilePlaybackRequired" xml:space="preserve"><value>This session uses a different device plugin or profile. Select Session playback to review its saved measurements.</value></data>
   <data name="HardwareSourceHint" xml:space="preserve"><value>Uses the configured serial path and verified profile. Errors keep this source selected; demo data are not substituted.</value></data>
+  <data name="HardwareModeScanUnavailable" xml:space="preserve"><value>The selected profile does not declare this hardware scan as available. Start scan is disabled and no command is sent.</value></data>
   <data name="DemoSourceHint" xml:space="preserve"><value>Uses clearly labelled synthetic samples. The serial port is not opened.</value></data>
   <data name="ConnectDevice" xml:space="preserve"><value>Connect to VNA</value></data>
   <data name="DisconnectDevice" xml:space="preserve"><value>Disconnect VNA</value></data>
@@ -88,6 +90,30 @@
   <data name="PortDiscoveryFailed" xml:space="preserve"><value>Could not detect ports: {0}</value></data>
   <data name="SessionStopFirst" xml:space="preserve"><value>Stop the current scan before opening a session.</value></data>
   <data name="SessionProfileMismatch" xml:space="preserve"><value>The session uses profile {0}, but the application uses {1}.</value></data>
+  <data name="SessionPluginMismatch" xml:space="preserve"><value>The session uses device plugin {0}, which is incompatible with the active plugin.</value></data>
+  <data name="SnapshotFileEmpty" xml:space="preserve"><value>The comparison snapshot file is empty.</value></data>
+  <data name="SnapshotFileInvalid" xml:space="preserve"><value>The comparison snapshot file is invalid: {0}</value></data>
+  <data name="SnapshotFormatUnsupported" xml:space="preserve"><value>Comparison snapshot format {0} is not supported.</value></data>
+  <data name="SnapshotNameInvalid" xml:space="preserve"><value>The comparison snapshot name is missing or invalid.</value></data>
+  <data name="SnapshotDisplayOffsetInvalid" xml:space="preserve"><value>The comparison snapshot display offset is invalid.</value></data>
+  <data name="SnapshotSessionMissing" xml:space="preserve"><value>The comparison snapshot contains no measurement session.</value></data>
+  <data name="SnapshotSessionInvalid" xml:space="preserve"><value>The comparison snapshot session is invalid: {0}</value></data>
+  <data name="SnapshotReflectionRequired" xml:space="preserve"><value>Scalar transmission and legacy FILTER snapshots with unknown data type cannot be shown as reflection or Smith-chart comparisons.</value></data>
+  <data name="ComparisonSnapshotsTitle" xml:space="preserve"><value>Sweep comparisons</value></data>
+  <data name="ComparisonFrequencyTrace" xml:space="preserve"><value>Compare metric</value></data>
+  <data name="ComparisonSnapshotNameHint" xml:space="preserve"><value>Snapshot name</value></data>
+  <data name="ComparisonSnapshotCapture" xml:space="preserve"><value>Save current</value></data>
+  <data name="ComparisonSnapshotOpen" xml:space="preserve"><value>Open snapshots</value></data>
+  <data name="ComparisonSnapshotClear" xml:space="preserve"><value>Clear</value></data>
+  <data name="ComparisonSnapshotFileType" xml:space="preserve"><value>VNA comparison snapshot</value></data>
+  <data name="ComparisonSnapshotSaveTitle" xml:space="preserve"><value>Save comparison snapshot</value></data>
+  <data name="ComparisonSnapshotOpenTitle" xml:space="preserve"><value>Open comparison snapshots</value></data>
+  <data name="SnapshotCaptureUnavailable" xml:space="preserve"><value>Complete a supported sweep and enter a snapshot name first.</value></data>
+  <data name="ComparisonSnapshotSaved" xml:space="preserve"><value>Saved comparison snapshot: {0}</value></data>
+  <data name="ComparisonSnapshotsLoaded" xml:space="preserve"><value>Loaded {0} comparison snapshot(s).</value></data>
+  <data name="ComparisonSnapshotSaveFailed" xml:space="preserve"><value>Could not save the comparison snapshot: {0}</value></data>
+  <data name="ComparisonSnapshotOpenFailed" xml:space="preserve"><value>Could not open comparison snapshots: {0}</value></data>
+  <data name="ComparisonSnapshotProvenanceFormat" xml:space="preserve"><value>Source: {0} · plugin: {1} · profile: {2} · Zref: {3} · captured: {4}</value></data>
   <data name="SessionSampleCountMismatch" xml:space="preserve"><value>The session sample count does not match the scan settings.</value></data>
   <data name="SessionPointFrequencyMismatch" xml:space="preserve"><value>Sample {0} frequency does not match the scan settings.</value></data>
   <data name="SessionLoaded" xml:space="preserve"><value>Session loaded · {0} points</value></data>
@@ -118,6 +144,7 @@
   <data name="SessionEmpty" xml:space="preserve"><value>The file does not contain a measurement session.</value></data>
   <data name="SessionFormatUnsupported" xml:space="preserve"><value>Unsupported session format version: {0}.</value></data>
   <data name="SessionProfileMissing" xml:space="preserve"><value>The session does not contain a device profile.</value></data>
+  <data name="SessionPluginIdInvalid" xml:space="preserve"><value>The session contains an invalid device plugin ID.</value></data>
   <data name="SessionSnapshotInvalid" xml:space="preserve"><value>The session profile snapshot is invalid or inconsistent with ProfileId.</value></data>
   <data name="SessionSweepMissing" xml:space="preserve"><value>The session does not contain scan settings.</value></data>
   <data name="SessionPointCountMismatch" xml:space="preserve"><value>The session point count does not match the scan parameters.</value></data>
@@ -133,10 +160,27 @@
   <data name="SmithResetView" xml:space="preserve"><value>Reset Smith view</value></data>
   <data name="SmithReference" xml:space="preserve"><value>Z₀ = {0} Ω</value></data>
   <data name="SmithReferenceUnknown" xml:space="preserve"><value>Z₀ unknown · normalized Γ only</value></data>
+  <data name="SmithComparisonReferencePerTrace" xml:space="preserve"><value>Comparison Z₀ is shown per trace</value></data>
   <data name="SmithMatched" xml:space="preserve"><value>matched</value></data>
   <data name="SmithNoComplexData" xml:space="preserve"><value>No usable phase or complex impedance data</value></data>
   <data name="SmithOutsideCount" xml:space="preserve"><value>Outside unit circle: {0}</value></data>
   <data name="SmithPhaseAmbiguous" xml:space="preserve"><value>Phase sign unconfirmed · mirrored traces</value></data>
+  <data name="SmithSwrCircle" xml:space="preserve"><value>SWR circle</value></data>
+  <data name="SmithSwrOff" xml:space="preserve"><value>Off</value></data>
+  <data name="SmithSwrFixed" xml:space="preserve"><value>Fixed SWR</value></data>
+  <data name="SmithSwrMarker1" xml:space="preserve"><value>Marker M1</value></data>
+  <data name="SmithSwrFixedHint" xml:space="preserve"><value>Finite SWR ≥ 1</value></data>
+  <data name="SmithSwrCircleValue" xml:space="preserve"><value>SWR = {0}</value></data>
+  <data name="SmithHoverFrequency" xml:space="preserve"><value>Frequency: {0} MHz</value></data>
+  <data name="SmithHoverImpedance" xml:space="preserve"><value>Z = {0} {1} j{2} Ω</value></data>
+  <data name="SmithHoverImpedancePositive" xml:space="preserve"><value>Z₁ = {0} + j{1} Ω</value></data>
+  <data name="SmithHoverImpedanceNegative" xml:space="preserve"><value>Z₂ = {0} − j{1} Ω</value></data>
+  <data name="SmithHoverReference" xml:space="preserve"><value>Zref: {0} Ω</value></data>
+  <data name="SmithHoverReferenceUnknown" xml:space="preserve"><value>Zref: unknown</value></data>
+  <data name="SmithHoverConfidence" xml:space="preserve"><value>Reactance sign: {0}</value></data>
+  <data name="SmithSignVerified" xml:space="preserve"><value>verified</value></data>
+  <data name="SmithSignAmbiguous" xml:space="preserve"><value>ambiguous</value></data>
+  <data name="SmithSignMissing" xml:space="preserve"><value>missing</value></data>
   <data name="SessionPointPhaseConfidenceUnknown" xml:space="preserve"><value>Sample {0} has an unknown phase confidence.</value></data>
   <data name="SessionPointPhaseProvenanceMissing" xml:space="preserve"><value>Sample {0} marks phase confidence verified without valid evidence.</value></data>
   <data name="SessionPointPhaseConfidenceMismatch" xml:space="preserve"><value>Sample {0} has phase confidence but no phase measurement.</value></data>
@@ -252,6 +296,34 @@
   <data name="AboutProduct" xml:space="preserve"><value>VNA Studio · SQ7MRU</value></data>
   <data name="AboutVersionFormat" xml:space="preserve"><value>Version {0}</value></data>
   <data name="AboutProtocolNote" xml:space="preserve"><value>Device communication is not enabled until the hardware protocol has been verified.</value></data>
+  <data name="DeviceProfilesMenu" xml:space="preserve"><value>Registered device profiles</value></data>
+  <data name="DeviceProfilesTitle" xml:space="preserve"><value>Registered device profiles</value></data>
+  <data name="DeviceProfilesDescription" xml:space="preserve"><value>This informational list comes from explicitly registered plugins. It does not select or connect a device. Capability status and evidence are profile declarations; they do not establish unverified hardware behavior.</value></data>
+  <data name="DeviceProfilesNoRegisteredPlugins" xml:space="preserve"><value>No device plugins are registered.</value></data>
+  <data name="DeviceProfilesUnknownReference" xml:space="preserve"><value>unknown</value></data>
+  <data name="DevicePluginSummaryFormat" xml:space="preserve"><value>{0} ({1})</value></data>
+  <data name="DeviceProfileSummaryFormat" xml:space="preserve"><value>  {0} [{1}] · {2}–{3} MHz · {4} points · Z₀ {5}</value></data>
+  <data name="DeviceCapabilitySummaryFormat" xml:space="preserve"><value>{0}: {1} — {2} (evidence: {3})</value></data>
+  <data name="DeviceCapabilityKindAnalysisMode" xml:space="preserve"><value>Analysis mode</value></data>
+  <data name="DeviceCapabilityKindDeviceCommand" xml:space="preserve"><value>Device command</value></data>
+  <data name="DeviceCapabilityKindApplicationTool" xml:space="preserve"><value>Application tool</value></data>
+  <data name="DeviceCapabilityKindUnknown" xml:space="preserve"><value>Unknown capability type</value></data>
+  <data name="DeviceCapabilityManualQuartzQ" xml:space="preserve"><value>Manual quartz Q helper</value></data>
+  <data name="DeviceCapabilityFilterSweep" xml:space="preserve"><value>Hardware FILTER sweep</value></data>
+  <data name="DeviceCapabilityGeneratorOutput" xml:space="preserve"><value>Generator output control</value></data>
+  <data name="DeviceCapabilityScanCancellation" xml:space="preserve"><value>Scan cancellation</value></data>
+  <data name="DeviceCapabilityAvailabilityAvailable" xml:space="preserve"><value>Available</value></data>
+  <data name="DeviceCapabilityAvailabilityPartial" xml:space="preserve"><value>Partial</value></data>
+  <data name="DeviceCapabilityAvailabilityBlocked" xml:space="preserve"><value>Blocked</value></data>
+  <data name="DeviceCapabilityAvailabilityUnknown" xml:space="preserve"><value>Unknown</value></data>
+  <data name="DeviceCapabilityEvidenceUnknown" xml:space="preserve"><value>Unknown evidence</value></data>
+  <data name="DeviceCapabilityEvidenceProfileDataOnly" xml:space="preserve"><value>Profile data only</value></data>
+  <data name="DeviceCapabilityEvidenceRelatedModelOnly" xml:space="preserve"><value>Related model only</value></data>
+  <data name="DeviceCapabilityEvidenceApplicationLogicPresent" xml:space="preserve"><value>Application logic present</value></data>
+  <data name="DeviceCapabilityEvidenceSourceCodeInspected" xml:space="preserve"><value>Source code inspected</value></data>
+  <data name="DeviceCapabilityEvidenceUserReportedOnDevice" xml:space="preserve"><value>User reported on device</value></data>
+  <data name="DeviceCapabilityEvidenceLabelObserved" xml:space="preserve"><value>Connector label observed</value></data>
+  <data name="DeviceCapabilityEvidenceReferenceMeasured" xml:space="preserve"><value>Measured against a reference</value></data>
   <data name="Close" xml:space="preserve"><value>Close</value></data>  <data name="MenuFile" xml:space="preserve"><value>File</value></data>
   <data name="MenuHelp" xml:space="preserve"><value>Help</value></data>
   <data name="NoSessionFile" xml:space="preserve"><value>No session file</value></data>
@@ -261,6 +333,13 @@
   <data name="MarkerQHint" xml:space="preserve"><value>Rounded midpoint frequency divided by marker bandwidth; this is not calibrated resonance Q.</value></data>
   <data name="ScanProgressFormat" xml:space="preserve"><value>Points {0}/{1} · last complete scan {2}</value></data>
   <data name="SessionAnalysisModeInvalid" xml:space="preserve"><value>The session analysis mode is not supported.</value></data>
+  <data name="SessionFrequencyGridConventionInvalid" xml:space="preserve"><value>The session frequency-grid convention is not supported.</value></data>
+  <data name="SessionMeasurementDataKindInvalid" xml:space="preserve"><value>The session measurement data kind is not supported.</value></data>
+  <data name="SessionMeasurementDataKindModeMismatch" xml:space="preserve"><value>The session measurement data kind does not match its analysis mode.</value></data>
+  <data name="SessionScalarDataShapeInvalid" xml:space="preserve"><value>A scalar transmission sample contains incompatible reflection data or no transmission magnitude.</value></data>
+  <data name="SessionReflectionDataShapeInvalid" xml:space="preserve"><value>A reflection sample contains scalar transmission data.</value></data>
+  <data name="SessionReflectionDataMissing" xml:space="preserve"><value>A valid reflection sample has no reflection measurement values.</value></data>
+  <data name="SessionCalibrationSnapshotInvalid" xml:space="preserve"><value>The session calibration and processing snapshot is invalid or unsupported.</value></data>
 </root>
 
 

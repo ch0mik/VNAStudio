@@ -33,16 +33,16 @@ User settings are saved in `LocalApplicationData/VnaStudio/settings.json`; on Wi
 }
 ```
 
-The INI is loaded from `analyz.ini` next to the executable, if present, otherwise `Assets/analyser306b-65mhz.ini`. The old `RS_address` value does not override the OS-specific port name. Profile settings bind through `IOptions<LegacyAnalyzIniOptions>`; user settings use `IOptionsMonitor<AppSettings>`.
+The legacy INI is loaded from `analyz.ini` next to the executable, if present, otherwise `Assets/analyser306b-65mhz.ini`. `IOptions<LegacyAnalyzIniOptions>` feeds `LegacyAnalyzIniProfileFactory`, which creates the compatibility `DeviceProfile`; `Vna65MHzProtocolSettings.FromLegacyProfile` then maps that profile into typed plugin settings. The configured port remains in `IOptionsMonitor<AppSettings>` and is passed to the plugin as a `DeviceConnectionRequest` without normalization.
 
-Serial parameters come from `IOptions<MiniVnaSerialOptions>`. The current application host registers their defaults, without binding a JSON serial section. Adding a `BaudRate` key to settings.json therefore does not change the speed in the current host.
+Serial parameters come from `IOptions<Vna65MHzSerialOptions>`. The current application host registers their defaults without binding a JSON serial section. Adding a `BaudRate` key to `settings.json` therefore does not change the speed in the current host.
 
 ## 2. One scan, step by step
 
 ```mermaid
 sequenceDiagram
     participant UI as MainWindowViewModel
-    participant Driver as MiniVnaSerialDevice
+    participant Driver as Vna65MHzMeasurementSource
     participant Port as SerialPortTransport
     participant VNA
     UI->>Driver: ConnectAsync(port, token), if needed
@@ -221,11 +221,12 @@ Original references include MSComm1's stored 115200 value at executable file off
 
 | Responsibility | Source |
 | --- | --- |
-| Port settings, enumeration | [SerialConnectionSettings](../src/Vna.Devices/Transport/SerialConnectionSettings.cs), [SerialPortCatalog](../src/Vna.Devices/Transport/SerialPortCatalog.cs) |
-| Open/write/read/cancel | [SerialPortTransport](../src/Vna.Devices/Transport/SerialPortTransport.cs) |
-| Defaults through IOptions | [MiniVnaSerialOptions](../src/Vna.Devices/MiniVnaSerialOptions.cs) |
-| Commands, DDS, framing, decoding | [MiniVnaSerialDevice](../src/Vna.Devices/MiniVnaSerialDevice.cs) |
-| INI mapping and profile | [LegacyAnalyzIniProfileFactory](../src/Vna.IO/LegacyAnalyzIniProfileFactory.cs), [DeviceProfile](../src/Vna.Core/DeviceProfile.cs) |
-| ADC/RF conversion | [RfSampleCalculator](../src/Vna.Core/RfSampleCalculator.cs) |
+| Port settings, enumeration | [SerialConnectionSettings](../src/Vna.Devices.Transport/SerialConnectionSettings.cs), [SerialPortCatalog](../src/Vna.Devices.Transport/SerialPortCatalog.cs) |
+| Open/write/read/cancel | [SerialPortTransport](../src/Vna.Devices.Transport/SerialPortTransport.cs) |
+| Serial defaults through IOptions | [Vna65MHzSerialOptions](../src/Vna.Device.Vna65MHz/Vna65MHzSerialOptions.cs) |
+| Commands, DDS, framing, decoding | [Vna65MHzMeasurementSource](../src/Vna.Device.Vna65MHz/Vna65MHzMeasurementSource.cs) |
+| INI mapping and protocol settings | [LegacyAnalyzIniProfileFactory](../src/Vna.Device.Vna65MHz/LegacyAnalyzIniProfileFactory.cs), [Vna65MHzProtocolSettings](../src/Vna.Device.Vna65MHz/Vna65MHzProtocolSettings.cs) |
+| VNA65 ADC/RF conversion | [Vna65MHzRfConverter](../src/Vna.Device.Vna65MHz/Vna65MHzRfConverter.cs); generic impedance math: [RfSampleCalculator](../src/Vna.Core/RfSampleCalculator.cs) |
+| Device-independent plugin contract | [DevicePluginContracts](../src/Vna.Core/DevicePluginContracts.cs), [DevicePluginCatalog](../src/Vna.Core/DevicePluginCatalog.cs) |
 | Source selection and scan lifecycle | [VnaDeviceRouter](../src/Vna.Devices/VnaDeviceRouter.cs), [MainWindowViewModel](../src/Vna.App/ViewModels/MainWindowViewModel.cs) |
 | Regression coverage | [Serial tests](../tests/Vna.Tests/MiniVnaSerialDeviceTests.cs), [ADC tests](../tests/Vna.Tests/LegacyAdcConversionTests.cs) |

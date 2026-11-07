@@ -14,7 +14,7 @@ internal static class TestData
 
     public static MeasurementSession Session(DeviceProfile? profile = null)
     {
-        profile ??= DeviceProfile.Vna65MHz;
+        profile ??= Vna65MHzDeviceProfile.Default;
         var sweep = new SweepSettings(1_000_000, 5_000_000, 5);
         return new MeasurementSession(1, profile.Id, "TEST", DateTimeOffset.UnixEpoch, sweep,
             Enumerable.Range(0, 5).Select(i => Point(sweep.FrequencyAt(i), 2 + i)).ToArray())
@@ -25,7 +25,7 @@ internal static class TestData
 
     // Existing measurement fixtures use a fixed culture/palette; startup tests pass AppSettings explicitly.
     public static MainWindowViewModel ViewModel(AppSettings? settings = null, IVnaDevice? device = null) => new(
-        device ?? new DemoVnaDevice(DeviceProfile.Vna65MHz), new NoPorts(),
+        device ?? new DemoVnaDevice(Vna65MHzDeviceProfile.Default), new NoPorts(),
         new TestSettings(settings ?? new AppSettings { Language = "pl-PL", Theme = "light" }), "unused-settings.json");
 
     private sealed class NoPorts : ISerialPortCatalog

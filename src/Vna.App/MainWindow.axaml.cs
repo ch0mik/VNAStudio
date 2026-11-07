@@ -5,6 +5,7 @@ using Avalonia.Markup.Xaml;
 using Avalonia.Threading;
 using Vna.App.Plotting;
 using Vna.App.ViewModels;
+using Vna.Core;
 using Vna.IO;
 using Vna.Localization;
 
@@ -198,6 +199,81 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    private async void SaveComparisonSnapshot_OnClick(object? sender, RoutedEventArgs e)
+    {
+        var snapshot = ViewModel.CreateComparisonSnapshot(ViewModel.ComparisonSnapshotName);
+        if (snapshot is null)
+        {
+            ViewModel.ReportLocalizedError("SnapshotCaptureUnavailable");
+            return;
+        }
+
+        try
+        {
+            var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+            {
+                Title = Text.Get("ComparisonSnapshotSaveTitle"),
+                SuggestedFileName = $"vna-snapshot-{DateTime.Now:yyyyMMdd-HHmmss}.vnasnapshot.json",
+                DefaultExtension = "json",
+                FileTypeChoices = new[]
+                {
+                    new FilePickerFileType(Text.Get("ComparisonSnapshotFileType"))
+                    {
+                        Patterns = new[] { "*.vnasnapshot.json" },
+                    },
+                },
+            });
+            if (file is null) return;
+            _lifetimeCancellation.Token.ThrowIfCancellationRequested();
+            await using var stream = await file.OpenWriteAsync();
+            await MeasurementSnapshotFile.SaveAsync(stream, snapshot, _lifetimeCancellation.Token);
+            ViewModel.AddComparisonSnapshot(snapshot);
+            ViewModel.ReportLocalizedStatus("ComparisonSnapshotSaved", snapshot.Name);
+        }
+        catch (Exception exception)
+        {
+            if (exception is OperationCanceledException) return;
+            ViewModel.ReportLocalizedError("ComparisonSnapshotSaveFailed", LocalizedErrors.Message(exception));
+        }
+    }
+
+    private async void OpenComparisonSnapshots_OnClick(object? sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+            {
+                Title = Text.Get("ComparisonSnapshotOpenTitle"),
+                AllowMultiple = true,
+                FileTypeFilter = new[]
+                {
+                    new FilePickerFileType(Text.Get("ComparisonSnapshotFileType"))
+                    {
+                        Patterns = new[] { "*.vnasnapshot.json" },
+                    },
+                },
+            });
+            var loadedSnapshots = new List<NamedMeasurementSnapshot>();
+            foreach (var file in files)
+            {
+                _lifetimeCancellation.Token.ThrowIfCancellationRequested();
+                await using var stream = await file.OpenReadAsync();
+                var snapshot = await MeasurementSnapshotFile.LoadAsync(stream, _lifetimeCancellation.Token);
+                loadedSnapshots.Add(snapshot);
+            }
+            if (loadedSnapshots.Any(snapshot => !snapshot.Session.IsReflectionComparisonCompatible))
+                throw LocalizedErrors.InvalidData("SnapshotReflectionRequired");
+            foreach (var snapshot in loadedSnapshots) ViewModel.AddComparisonSnapshot(snapshot);
+            if (files.Count > 0)
+                ViewModel.ReportLocalizedStatus("ComparisonSnapshotsLoaded", loadedSnapshots.Count);
+        }
+        catch (Exception exception)
+        {
+            if (exception is OperationCanceledException) return;
+            ViewModel.ReportLocalizedError("ComparisonSnapshotOpenFailed", LocalizedErrors.Message(exception));
+        }
+    }
+
     private async void About_OnClick(object? sender, RoutedEventArgs e)
     {
         var dialog = new Window
@@ -222,6 +298,52 @@ public sealed partial class MainWindow : Window
         await dialog.ShowDialog(this);
     }
 
+    private async void DeviceProfiles_OnClick(object? sender, RoutedEventArgs e)
+    {
+        var dialog = new Window
+        {
+            Title = Text.Get("DeviceProfilesTitle"),
+            Width = 620,
+            Height = 520,
+            MinWidth = 480,
+            MinHeight = 360,
+            CanResize = true,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            Background = Background,
+            Foreground = Foreground,
+            RequestedThemeVariant = ViewModel.ThemeVariant,
+        };
+        var content = new StackPanel { Spacing = 12 };
+        content.Children.Add(new TextBlock
+        {
+            Text = Text.Get("DeviceProfilesDescription"),
+            TextWrapping = Avalonia.Media.TextWrapping.Wrap,
+        });
+        content.Children.Add(new TextBlock
+        {
+            Text = ViewModel.DeviceProfilesSummary,
+            TextWrapping = Avalonia.Media.TextWrapping.Wrap,
+        });
+        var close = new Button
+        {
+            Content = Text.Get("Close"),
+            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right,
+            Classes = { "Primary" },
+        };
+        close.Click += (_, _) => dialog.Close();
+        content.Children.Add(close);
+        dialog.Content = new Border
+        {
+            Padding = new Avalonia.Thickness(20),
+            Child = new ScrollViewer
+            {
+                VerticalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Auto,
+                Content = content,
+            },
+        };
+        await dialog.ShowDialog(this);
+    }
+
     private async void OpenCsv_OnClick(object? sender, RoutedEventArgs e)
     {
         try
@@ -238,7 +360,9 @@ public sealed partial class MainWindow : Window
             if (files.Count == 0) return;
             _lifetimeCancellation.Token.ThrowIfCancellationRequested();
             await using var stream = await files[0].OpenReadAsync();
-            var session = await MeasurementCsvFile.LoadAsync(stream, ViewModel.Profile, _lifetimeCancellation.Token);
+            var session = ViewModel.ActiveProfileDescriptor is { } descriptor
+                ? await MeasurementCsvFile.LoadAsync(stream, descriptor, _lifetimeCancellation.Token)
+                : await MeasurementCsvFile.LoadAsync(stream, ViewModel.Profile, _lifetimeCancellation.Token);
             _lifetimeCancellation.Token.ThrowIfCancellationRequested();
             ViewModel.LoadSession(session);
             ViewModel.MarkSessionSaved(files[0].Name);

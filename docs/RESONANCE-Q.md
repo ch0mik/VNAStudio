@@ -9,3 +9,5 @@ For the parallel-resonance procedure, the manual says to set the lower and upper
 The supplied manual's example, Fres = 14.400 MHz, Fl = 14.312 MHz, Fh = 14.4816 MHz, yields Q ≈ 84.9. This physical-method calculator is separate from the marker-based Q hint inferred from the screenshots.
 
 Source: the user-provided resonance measurement manual, page 2. The old manual also says the XTAL automation tab itself was not programmed; VNA Studio therefore presents this as a manual calculator, not as automatic crystal equivalent-circuit extraction. The original manuals are kept outside this repository.
+
+Automatic resonance search, crystal equivalent-circuit extraction, and RLC/trap/transformer/IF analysis remain unimplemented. They must not be enabled as measurement features until the exact fixture/model, phase and frequency behavior, and independent reference vectors are validated. Any future exploratory result must be labelled experimental and must preserve its source data.

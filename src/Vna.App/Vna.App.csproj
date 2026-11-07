@@ -22,7 +22,9 @@
     <ProjectReference Include="..\Vna.Core\Vna.Core.csproj" />
     <ProjectReference Include="..\Vna.Localization\Vna.Localization.csproj" />
     <ProjectReference Include="..\Vna.Devices\Vna.Devices.csproj" />
+    <ProjectReference Include="..\Vna.Devices.Transport\Vna.Devices.Transport.csproj" />
     <ProjectReference Include="..\Vna.IO\Vna.IO.csproj" />
+    <ProjectReference Include="..\Vna.Device.Vna65MHz\Vna.Device.Vna65MHz.csproj" />
   </ItemGroup>
   <ItemGroup>
     <None Update="Assets\analyser306b-65mhz.ini" CopyToOutputDirectory="PreserveNewest" />

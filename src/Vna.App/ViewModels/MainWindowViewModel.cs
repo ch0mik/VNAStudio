@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Diagnostics;
+using System.Text;
 using System.Windows.Input;
 using Avalonia.Threading;
 using Avalonia.Media;
@@ -23,7 +24,10 @@ public enum AntennaChartView { Frequency, Smith, Both }
 public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
 {
     private readonly IVnaDevice _device;
+    private readonly DeviceProfileDescriptor? _deviceProfileDescriptor;
+    private readonly string? _activeProfilePluginId;
     private readonly IDeviceSourceSelector? _deviceSourceSelector;
+    private readonly DevicePluginCatalog? _devicePluginCatalog;
     private readonly ISerialPortCatalog _portCatalog;
     private readonly CancellationTokenSource _lifetimeCancellation = new();
     private readonly Stack<(long Start, long Stop)> _zoomHistory = new();
@@ -36,6 +40,13 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
     private string? _selectedDiscoveredPort;
     private string _dataSource;
     private DeviceProfile? _profileSnapshot;
+    private DeviceProfileDescriptor? _loadedSessionProfileDescriptor;
+    private string? _loadedSessionProfileId;
+    private string? _loadedSessionPluginId;
+    private SessionAnalysisMode? _loadedSessionAnalysisMode;
+    private FrequencyGridConvention _frequencyGridConvention = FrequencyGridConvention.Unknown;
+    private MeasurementDataKind _measurementDataKind = MeasurementDataKind.Unknown;
+    private MeasurementCalibrationSnapshot? _calibrationSnapshot;
     private readonly Dictionary<PlotTrace, string> _traceColorOverrides;
     private bool _updatingTraceColors;
     private PlotPalette _plotPalette = Vna.App.Plotting.PlotPalette.LegacyDefault;
@@ -61,6 +72,8 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
     private double _smithZoom = 1;
     private double _smithPanReal;
     private double _smithPanImaginary;
+    private SmithSwrCircleMode _smithSwrCircleMode;
+    private string _smithFixedSwrText = "2";
     private string _returnLossDisplayOffsetText = "0";
     private double _returnLossDisplayOffsetDb;
     private bool _isReturnLossDisplayOffsetValid = true;
@@ -69,6 +82,8 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
     private string _lowerEdgeMHz = string.Empty;
     private string _upperEdgeMHz = string.Empty;
     private string _generatorFrequencyMHz = string.Empty;
+    private string _comparisonSnapshotName = string.Empty;
+    private TraceOption? _selectedComparisonTraceOption;
     private GeneratorMemoryPreset? _selectedGeneratorMemory;
     private AmateurBandGroup _selectedBandGroup = AmateurBandGroup.Hf;
     private AmateurBandPreset? _selectedBandPreset;
@@ -98,9 +113,17 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         ISerialPortCatalog portCatalog,
         IOptionsMonitor<AppSettings> settings,
         string configurationPath,
-        LocalizationService? localizer = null)
+        LocalizationService? localizer = null,
+        DeviceProfileDescriptor? deviceProfileDescriptor = null,
+        string? activeProfilePluginId = null,
+        DevicePluginCatalog? devicePluginCatalog = null)
     {
         _device = device;
+        _devicePluginCatalog = devicePluginCatalog;
+        _deviceProfileDescriptor = deviceProfileDescriptor;
+        _activeProfilePluginId = string.IsNullOrWhiteSpace(activeProfilePluginId)
+            ? device.DevicePluginId
+            : activeProfilePluginId;
         _deviceSourceSelector = device as IDeviceSourceSelector;
         _portCatalog = portCatalog;
         ArgumentNullException.ThrowIfNull(settings);
@@ -117,9 +140,13 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         ReturnLossX2 = settings.CurrentValue.ReturnLossX2;
         ShowFullMarkerValues = settings.CurrentValue.ShowFullMarkerValues;
         _selectedChartView = ParseChartView(settings.CurrentValue.AntennaChartView);
-        _cableVelocityFactorText = GetCableVelocityFactor(settings.CurrentValue.CableVelocityFactor, device.Profile)
-            .ToString("0.###", Localizer.Culture);
+        _smithSwrCircleMode = ParseSmithSwrCircleMode(settings.CurrentValue.SmithSwrCircleMode);
+        _smithFixedSwrText = Math.Max(1, double.IsFinite(settings.CurrentValue.SmithFixedSwr)
+            ? settings.CurrentValue.SmithFixedSwr : 2).ToString("G", Localizer.Culture);
+        _cableVelocityFactorText = FormatCableVelocityFactor(GetCableVelocityFactor(
+            settings.CurrentValue.CableVelocityFactor, _deviceProfileDescriptor), Localizer.Culture);
         _dataSource = device.DataSourceName;
+        _frequencyGridConvention = GetInitialFrequencyGridConvention(device.DataSourceName);
         _profileSnapshot = device.Profile;
         ConfigurationPath = configurationPath;
         _settingsSubscription = settings.OnChange(updated =>
@@ -135,23 +162,35 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
                 ReturnLossX2 = updated.ReturnLossX2;
                 ShowFullMarkerValues = updated.ShowFullMarkerValues;
                 SelectedChartView = ParseChartView(updated.AntennaChartView);
+                SelectedSmithSwrCircleMode = ParseSmithSwrCircleMode(updated.SmithSwrCircleMode);
+                SmithFixedSwrText = Math.Max(1, double.IsFinite(updated.SmithFixedSwr)
+                    ? updated.SmithFixedSwr : 2).ToString("G", Localizer.Culture);
                 Localizer.ChangeLanguage(updated.Language);
                 ReturnLossDisplayOffsetText = updated.ReturnLossDisplayOffsetDb.ToString("0.###", Localizer.Culture);
-                CableVelocityFactorText = GetCableVelocityFactor(updated.CableVelocityFactor, device.Profile)
-                    .ToString("0.###", Localizer.Culture);
+                CableVelocityFactorText = FormatCableVelocityFactor(GetCableVelocityFactor(
+                    updated.CableVelocityFactor, _deviceProfileDescriptor), Localizer.Culture);
                 SelectedTheme = Themes.First(theme => theme.Code == AppThemes.Normalize(updated.Theme));
                 ApplyTraceColorOverrides(updated.TraceColors);
             }));
         Profile = device.Profile;
         ReturnLossDisplayOffsetText = settings.CurrentValue.ReturnLossDisplayOffsetDb.ToString("0.###", Localizer.Culture);
-        GeneratorMemories = Array.AsReadOnly(Profile.GeneratorMemoryFrequenciesHz
+        var descriptorFrequencies = _deviceProfileDescriptor?.FrequencyPresetsHz;
+        var generatorFrequencies = descriptorFrequencies is { Count: > 0 }
+            ? descriptorFrequencies
+            : Profile.GeneratorMemoryFrequenciesHz;
+        GeneratorMemories = Array.AsReadOnly(generatorFrequencies
             .Select((frequency, index) => new GeneratorMemoryPreset(index, frequency)).ToArray());
         _traceColorOverrides = ParseTraceColorOverrides(settings.CurrentValue.TraceColors);
-        var profilePalette = Vna.App.Plotting.PlotPalette.FromProfile(Profile);
-        PlotPalette = Vna.App.Plotting.PlotPalette.FromProfile(Profile, _selectedTheme.Kind, _traceColorOverrides);
-        _startMHz = (Profile.MinimumFrequencyHz / 1_000_000.0).ToString("0.###", Localizer.Culture);
-        _stopMHz = (Profile.MaximumFrequencyHz / 1_000_000.0).ToString("0.###", Localizer.Culture);
-        _pointCount = Profile.DefaultPointCount.ToString(Localizer.Culture);
+        var profilePalette = _deviceProfileDescriptor is { } descriptor
+            ? Vna.App.Plotting.PlotPalette.FromPresentation(descriptor.Presentation, AppThemeKind.Light)
+            : Vna.App.Plotting.PlotPalette.FromProfile(Profile);
+        PlotPalette = _deviceProfileDescriptor is { } presentationProfile
+            ? Vna.App.Plotting.PlotPalette.FromPresentation(
+                presentationProfile.Presentation, _selectedTheme.Kind, _traceColorOverrides)
+            : Vna.App.Plotting.PlotPalette.FromProfile(Profile, _selectedTheme.Kind, _traceColorOverrides);
+        _startMHz = (ProfileMinimumFrequencyHz / 1_000_000.0).ToString("0.###", Localizer.Culture);
+        _stopMHz = (ProfileMaximumFrequencyHz / 1_000_000.0).ToString("0.###", Localizer.Culture);
+        _pointCount = ProfileDefaultPointCount.ToString(Localizer.Culture);
         Traces = new ObservableCollection<TraceOption>
         {
             CreateTrace(PlotTrace.Swr, "TraceSwr"),
@@ -161,12 +200,25 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
             CreateTrace(PlotTrace.Resistance, "TraceResistance"),
             CreateTrace(PlotTrace.Reactance, "TraceReactance"),
         };
+        _selectedComparisonTraceOption = Traces.First(trace => trace.Trace == PlotTrace.ReturnLoss);
+        ApplyCurrentProfilePalette();
         Points.CollectionChanged += (_, _) =>
         {
             OnPropertyChanged(nameof(ScanProgressValue));
             OnPropertyChanged(nameof(ScanProgressDisplay));
             OnPropertyChanged(nameof(CanSaveSession));
+            OnPropertyChanged(nameof(CanCaptureComparisonSnapshot));
+            OnPropertyChanged(nameof(CanStartScan));
             UpdateScaleZoomAvailability();
+            ((AsyncRelayCommand)StartCommand).NotifyCanExecuteChanged();
+            ConnectDeviceCommand.NotifyCanExecuteChanged();
+        };
+        ComparisonSnapshots.CollectionChanged += (_, _) =>
+        {
+            OnPropertyChanged(nameof(SmithComparisonOverlays));
+            OnPropertyChanged(nameof(FrequencyComparisonOverlays));
+            OnPropertyChanged(nameof(CanClearComparisonSnapshots));
+            ClearComparisonSnapshotsCommand.NotifyCanExecuteChanged();
         };
         foreach (var trace in Traces) trace.PropertyChanged += (_, args) =>
         {
@@ -193,11 +245,12 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         SmithZoomInCommand = new RelayCommand(() => ChangeSmithZoom(2));
         SmithZoomOutCommand = new RelayCommand(() => ChangeSmithZoom(0.5));
         ResetSmithViewCommand = new RelayCommand(ResetSmithView);
+        ClearComparisonSnapshotsCommand = new RelayCommand(ClearComparisonSnapshots, () => CanClearComparisonSnapshots);
         SelectHfBandsCommand = new RelayCommand(() => SelectedBandGroup = AmateurBandGroup.Hf);
         SelectVhfBandsCommand = new RelayCommand(() => SelectedBandGroup = AmateurBandGroup.Vhf);
         ConnectDeviceCommand = new AsyncRelayCommand(ConnectDeviceAsync, () => CanConnectDevice);
         DisconnectDeviceCommand = new AsyncRelayCommand(DisconnectDeviceAsync, () => CanDisconnectDevice);
-        StartCommand = new AsyncRelayCommand(StartScanAsync, () => !IsScanning && !_isConnectingDevice && !_isDisposed);
+        StartCommand = new AsyncRelayCommand(StartScanAsync, () => CanStartScan);
         HoldCommand = new AsyncRelayCommand(HandleHoldChangedAsync, () => !_isDisposed);
         StopCommand = new RelayCommand(StopScanning, () => IsScanning);
         ClearZoomCommand = new RelayCommand(ResetZoom);
@@ -235,7 +288,7 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         set
         {
             if (value is null || !Themes.Contains(value) || !SetProperty(ref _selectedTheme, value)) return;
-            ApplyProfilePalette(_profileSnapshot ?? Profile);
+            ApplyCurrentProfilePalette();
             OnPropertyChanged(nameof(ThemeVariant));
             OnPropertyChanged(nameof(IsNightVision));
         }
@@ -246,6 +299,11 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
     {
         PortName = PortName,
         MeasurementSource = _measurementSourceMode.ToString().ToLowerInvariant(),
+        DeviceSelection = new DeviceSelectionSettings
+        {
+            PluginId = string.IsNullOrWhiteSpace(_activeProfilePluginId) ? string.Empty : _activeProfilePluginId,
+            ProfileId = string.IsNullOrWhiteSpace(_activeProfilePluginId) ? string.Empty : ProfileId,
+        },
         Show50OhmReference = Show50OhmReference,
         ShowXcXl = ShowXcXl,
         ReturnLossX2 = ReturnLossX2,
@@ -255,9 +313,34 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         Language = Localizer.LanguageCode,
         Theme = SelectedTheme.Code,
         AntennaChartView = SelectedChartView.ToString().ToLowerInvariant(),
+        SmithSwrCircleMode = SelectedSmithSwrCircleMode.ToString().ToLowerInvariant(),
+        SmithFixedSwr = SmithFixedSwr ?? 2,
         TraceColors = _traceColorOverrides.ToDictionary(pair => pair.Key.ToString(), pair => pair.Value),
     };
     public DeviceProfile Profile { get; }
+    /// <summary>Active neutral profile metadata for imports; null only for legacy/test compositions.</summary>
+    public DeviceProfileDescriptor? ActiveProfileDescriptor => _deviceProfileDescriptor;
+    private string ProfileId => _deviceProfileDescriptor?.Id ?? Profile.Id;
+    private bool IsSessionProfileCompatibleWithActive(string? sessionProfileId, string? sessionPluginId)
+    {
+        if (!string.Equals(sessionProfileId, ProfileId, StringComparison.Ordinal)) return false;
+        if (sessionPluginId is null) return true;
+        if (_activeProfilePluginId is null) return false;
+        if (string.Equals(sessionPluginId, _activeProfilePluginId, StringComparison.OrdinalIgnoreCase)) return true;
+        return string.Equals(sessionPluginId, LegacyDevicePluginIds.Vna65MHz, StringComparison.OrdinalIgnoreCase) &&
+               string.Equals(sessionProfileId, LegacyDevicePluginIds.Vna65MHzProfile, StringComparison.Ordinal) &&
+               string.Equals(_activeProfilePluginId, DevicePluginIds.Vna65MHz, StringComparison.OrdinalIgnoreCase);
+    }
+    private DeviceProfileDescriptor? CurrentProfileDescriptor => IsSessionLoaded
+        ? _loadedSessionProfileDescriptor
+        : _deviceProfileDescriptor;
+    private DeviceProfile? CurrentCompatibilityProfile => IsSessionLoaded ? _profileSnapshot : Profile;
+    private long ProfileMinimumFrequencyHz => CurrentProfileDescriptor?.MinimumFrequencyHz ??
+        CurrentCompatibilityProfile?.MinimumFrequencyHz ?? Profile.MinimumFrequencyHz;
+    private long ProfileMaximumFrequencyHz => CurrentProfileDescriptor?.MaximumFrequencyHz ??
+        CurrentCompatibilityProfile?.MaximumFrequencyHz ?? Profile.MaximumFrequencyHz;
+    private int ProfileDefaultPointCount => CurrentProfileDescriptor?.DefaultPointCount ??
+        CurrentCompatibilityProfile?.DefaultPointCount ?? Profile.DefaultPointCount;
     public PlotPalette PlotPalette { get => _plotPalette; private set => SetProperty(ref _plotPalette, value); }
     public AntennaChartView SelectedChartView
     {
@@ -279,6 +362,12 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         "both" => AntennaChartView.Both,
         _ => AntennaChartView.Frequency,
     };
+    private static SmithSwrCircleMode ParseSmithSwrCircleMode(string? value) => value?.Trim().ToLowerInvariant() switch
+    {
+        "fixed" => SmithSwrCircleMode.Fixed,
+        "marker1" => SmithSwrCircleMode.Marker1,
+        _ => SmithSwrCircleMode.Hidden,
+    };
     public bool IsSingleChartView => SelectedChartView != AntennaChartView.Both;
     public bool IsFrequencyChartVisible => SelectedChartView is AntennaChartView.Frequency or AntennaChartView.Both;
     public bool IsSmithChartVisible => SelectedChartView is AntennaChartView.Smith or AntennaChartView.Both;
@@ -288,10 +377,79 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
     public double SmithZoom { get => _smithZoom; private set => SetProperty(ref _smithZoom, value); }
     public double SmithPanReal { get => _smithPanReal; private set => SetProperty(ref _smithPanReal, value); }
     public double SmithPanImaginary { get => _smithPanImaginary; private set => SetProperty(ref _smithPanImaginary, value); }
-    public double? SmithReferenceImpedanceOhms => _profileSnapshot?.ReferenceImpedanceOhms;
+    public SmithSwrCircleMode SelectedSmithSwrCircleMode
+    {
+        get => _smithSwrCircleMode;
+        set
+        {
+            if (!Enum.IsDefined(value) || !SetProperty(ref _smithSwrCircleMode, value)) return;
+            OnPropertyChanged(nameof(SmithSwrCircleModeIndex));
+            OnPropertyChanged(nameof(IsSmithFixedSwrMode));
+        }
+    }
+    public int SmithSwrCircleModeIndex
+    {
+        get => (int)SelectedSmithSwrCircleMode;
+        set { if (Enum.IsDefined((SmithSwrCircleMode)value)) SelectedSmithSwrCircleMode = (SmithSwrCircleMode)value; }
+    }
+    public bool IsSmithFixedSwrMode => SelectedSmithSwrCircleMode == SmithSwrCircleMode.Fixed;
+    public string SmithFixedSwrText
+    {
+        get => _smithFixedSwrText;
+        set
+        {
+            if (!SetProperty(ref _smithFixedSwrText, value ?? string.Empty)) return;
+            OnPropertyChanged(nameof(SmithFixedSwr));
+            OnPropertyChanged(nameof(IsSmithFixedSwrValid));
+        }
+    }
+    public double? SmithFixedSwr => double.TryParse(SmithFixedSwrText, NumberStyles.Float, Localizer.Culture, out var value) &&
+        double.IsFinite(value) && value >= 1 ? value : null;
+    public bool IsSmithFixedSwrValid => SmithFixedSwr is not null;
+    public double? SmithReferenceImpedanceOhms => IsSessionLoaded
+        ? _loadedSessionProfileDescriptor?.ReferenceImpedanceOhms ??
+          (_loadedSessionProfileDescriptor is null ? _profileSnapshot?.ReferenceImpedanceOhms : null)
+        : _deviceProfileDescriptor is { } activeDescriptor
+            ? activeDescriptor.ReferenceImpedanceOhms
+            : Profile.ReferenceImpedanceOhms;
     public ObservableCollection<MeasurementPoint> Points { get; } = new();
+    public ObservableCollection<ComparisonSnapshotOption> ComparisonSnapshots { get; } = new();
     public ObservableCollection<string> AvailablePortNames { get; } = new();
     public IReadOnlyList<MeasurementPoint> PlotPoints { get => _plotPoints; private set => SetProperty(ref _plotPoints, value); }
+    public IReadOnlyList<SmithComparisonOverlay> SmithComparisonOverlays => Array.AsReadOnly(
+        ComparisonSnapshots.Where(snapshot => snapshot.IsVisible).Select(snapshot =>
+        {
+            var session = snapshot.Snapshot.Session;
+            return new SmithComparisonOverlay(snapshot.Name, GetSnapshotDisplayPoints(snapshot.Snapshot),
+                GetSnapshotReferenceImpedance(session), snapshot.Color);
+        }).ToArray());
+    public IReadOnlyList<FrequencyComparisonOverlay> FrequencyComparisonOverlays => Array.AsReadOnly(
+        ComparisonSnapshots.Where(snapshot => snapshot.IsVisible).Select(snapshot =>
+            new FrequencyComparisonOverlay(snapshot.Name, GetSnapshotDisplayPoints(snapshot.Snapshot), snapshot.Color)).ToArray());
+    public TraceOption? SelectedComparisonTraceOption
+    {
+        get => _selectedComparisonTraceOption;
+        set
+        {
+            if (value is null || !Traces.Contains(value) || !SetProperty(ref _selectedComparisonTraceOption, value)) return;
+            OnPropertyChanged(nameof(ComparisonTrace));
+        }
+    }
+    public PlotTrace ComparisonTrace => SelectedComparisonTraceOption?.Trace ?? PlotTrace.ReturnLoss;
+    public string ComparisonSnapshotName
+    {
+        get => _comparisonSnapshotName;
+        set
+        {
+            if (!SetProperty(ref _comparisonSnapshotName, value ?? string.Empty)) return;
+            OnPropertyChanged(nameof(IsComparisonSnapshotNameValid));
+            OnPropertyChanged(nameof(CanCaptureComparisonSnapshot));
+        }
+    }
+    public bool IsComparisonSnapshotNameValid => !string.IsNullOrWhiteSpace(ComparisonSnapshotName) &&
+                                                   ComparisonSnapshotName.Trim().Length <= 120;
+    public bool CanCaptureComparisonSnapshot => CanSaveSession && IsComparisonSnapshotNameValid;
+    public bool CanClearComparisonSnapshots => ComparisonSnapshots.Count > 0;
     public IReadOnlyList<MeasurementPoint> AnalysisPlotPoints
     {
         get => _analysisPlotPoints;
@@ -334,6 +492,7 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
     public RelayCommand SmithZoomInCommand { get; }
     public RelayCommand SmithZoomOutCommand { get; }
     public RelayCommand ResetSmithViewCommand { get; }
+    public RelayCommand ClearComparisonSnapshotsCommand { get; }
     public RelayCommand SelectHfBandsCommand { get; }
     public RelayCommand SelectVhfBandsCommand { get; }
     public ICommand StartCommand { get; }
@@ -475,7 +634,7 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
     }
     public bool IsGeneratorFrequencyValid =>
         TryParseFrequencyMHz(GeneratorFrequencyMHz, out var frequency) &&
-        frequency >= Profile.MinimumFrequencyHz && frequency <= Profile.MaximumFrequencyHz;
+        frequency >= ProfileMinimumFrequencyHz && frequency <= ProfileMaximumFrequencyHz;
     public bool CanEnableGeneratorOutput => false;
     public double? ResonanceQ
     {
@@ -484,8 +643,8 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
             if (!TryParseFrequencyMHz(ResonanceFrequencyMHz, out var resonanceHz) ||
                 !TryParseFrequencyMHz(LowerEdgeMHz, out var lowerHz) ||
                 !TryParseFrequencyMHz(UpperEdgeMHz, out var upperHz) ||
-                resonanceHz < Profile.MinimumFrequencyHz || resonanceHz > Profile.MaximumFrequencyHz ||
-                lowerHz < Profile.MinimumFrequencyHz || upperHz > Profile.MaximumFrequencyHz)
+                resonanceHz < ProfileMinimumFrequencyHz || resonanceHz > ProfileMaximumFrequencyHz ||
+                lowerHz < ProfileMinimumFrequencyHz || upperHz > ProfileMaximumFrequencyHz)
                 return null;
             try { return ResonanceQCalculator.Calculate(resonanceHz, lowerHz, upperHz); }
             catch (ArgumentException) { return null; }
@@ -499,14 +658,16 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         get => _selectedMode;
         set
         {
-            if (!Enum.IsDefined(value) || !SetProperty(ref _selectedMode, value)) return;
+            if (_isScanning || !Enum.IsDefined(value) || !SetProperty(ref _selectedMode, value)) return;
             if (value == AnalysisMode.CableLoss) IsCableLossFixtureReady = false;
             foreach (var property in new[]
                      {
                          nameof(IsAntennaMode), nameof(IsCableLossMode), nameof(IsCableLengthMode), nameof(IsXtalMode),
-                         nameof(IsFilterMode), nameof(IsGeneratorMode), nameof(IsCableLossAnalysisMode), nameof(IsCableLengthAnalysisMode), nameof(IsXtalAnalysisMode), nameof(IsFilterAnalysisMode), nameof(IsGeneratorAnalysisMode), nameof(IsUnavailableMode), nameof(ModeUnavailableMessage), nameof(CanSaveSession),
+                         nameof(IsFilterMode), nameof(IsGeneratorMode), nameof(IsCableLossAnalysisMode), nameof(IsCableLengthAnalysisMode), nameof(IsXtalAnalysisMode), nameof(IsFilterAnalysisMode), nameof(IsGeneratorAnalysisMode), nameof(IsUnavailableMode), nameof(ModeUnavailableMessage), nameof(CanSaveSession), nameof(CanCaptureComparisonSnapshot), nameof(CanStartScan),
+                         nameof(MeasurementSourceHint),
                      })
                 OnPropertyChanged(property);
+            ((AsyncRelayCommand)StartCommand).NotifyCanExecuteChanged();
         }
     }
     public bool IsAntennaMode { get => SelectedMode == AnalysisMode.Antenna; set { if (value) SelectedMode = AnalysisMode.Antenna; } }
@@ -544,10 +705,17 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
     }
     public bool IsHfBandGroup => SelectedBandGroup == AmateurBandGroup.Hf;
     public IReadOnlyList<AmateurBandPreset> VisibleAmateurBands => BandPresets
-        .Where(band => band.Group == SelectedBandGroup && band.Fits(Profile)).ToArray();
-    private IReadOnlyList<AmateurBandPreset> BandPresets => Profile.LegacyBandPresets.Count > 0
-        ? Profile.LegacyBandPresets
-        : PolishAmateurBandPresets.All;
+        .Where(band => band.Group == SelectedBandGroup &&
+                       (CurrentProfileDescriptor is { } descriptor
+                           ? band.Fits(descriptor)
+                           : band.Fits(CurrentCompatibilityProfile ?? Profile)))
+        .ToArray();
+    private IReadOnlyList<AmateurBandPreset> BandPresets =>
+        CurrentProfileDescriptor?.Presentation.FrequencyBands is { Count: > 0 } bands
+            ? bands
+            : CurrentCompatibilityProfile?.LegacyBandPresets is { Count: > 0 } legacyBands
+                ? legacyBands
+                : PolishAmateurBandPresets.All;
     public AmateurBandPreset? SelectedBandPreset
     {
         get => _selectedBandPreset;
@@ -560,7 +728,7 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         }
     }
     public string BandGroupHint => SelectedBandGroup == AmateurBandGroup.Vhf && VisibleAmateurBands.Count == 0
-        ? Text.Format("BandOutsideProfile", Profile.MaximumFrequencyHz / 1_000_000.0)
+        ? Text.Format("BandOutsideProfile", ProfileMaximumFrequencyHz / 1_000_000.0)
         : Text.Get("AmateurBandPresetHint");
     public string DataSource { get => _dataSource; private set { if (SetProperty(ref _dataSource, value)) OnPropertyChanged(nameof(DataSourceDisplay)); } }
     public string DataSourceDisplay
@@ -629,16 +797,23 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         }
     }
     public bool CanConnectDevice =>
-        (IsHardwareSource || IsPlaybackSource && (IsSessionLoaded || _lastSweep is not null && Points.Count == _lastSweep.PointCount)) &&
+        (IsHardwareSource && (!IsSessionLoaded || IsSessionProfileCompatibleWithActive(_loadedSessionProfileId, _loadedSessionPluginId)) ||
+         IsPlaybackSource && HasPlaybackSession) &&
         !IsDeviceConnected && !IsConnectingDevice && !IsScanning && !_isDisposed;
+    private bool HasPlaybackSession => IsSessionLoaded || _lastSweep is not null && Points.Count == _lastSweep.PointCount;
     public bool CanDisconnectDevice => (IsHardwareSource || IsPlaybackSource) && IsDeviceConnected && !IsConnectingDevice && !_isDisposed;
     public bool CanChangePort => !IsDeviceConnected && !IsConnectingDevice && !IsScanning && !_isDisposed;
-    public string MeasurementSourceHint => Text.Get(_measurementSourceMode switch
-    {
-        DeviceSourceMode.Hardware => "HardwareSourceHint",
-        DeviceSourceMode.Playback => IsSessionLoaded ? "PlaybackSourceHint" : "PlaybackOpenSessionHint",
-        _ => "DemoSourceHint",
-    });
+    public string MeasurementSourceHint => IsSessionLoaded && !IsPlaybackSource &&
+        !IsSessionProfileCompatibleWithActive(_loadedSessionProfileId, _loadedSessionPluginId)
+            ? Text.Get("SessionProfilePlaybackRequired")
+            : IsHardwareSource && !IsHardwareModeScanAvailable
+                ? Text.Get("HardwareModeScanUnavailable")
+            : Text.Get(_measurementSourceMode switch
+            {
+                DeviceSourceMode.Hardware => "HardwareSourceHint",
+                DeviceSourceMode.Playback => HasPlaybackSession ? "PlaybackSourceHint" : "PlaybackOpenSessionHint",
+                _ => "DemoSourceHint",
+            });
     private string ConnectingStatusKey => _measurementSourceMode switch
     {
         DeviceSourceMode.Hardware => "StatusConnectingHardware",
@@ -670,7 +845,12 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         OnPropertyChanged(nameof(MeasurementSourceHint));
         OnPropertyChanged(nameof(CanConnectDevice));
         OnPropertyChanged(nameof(CanDisconnectDevice));
-        if (!IsSessionLoaded) DataSource = _device.DataSourceName;
+        ((AsyncRelayCommand)StartCommand).NotifyCanExecuteChanged();
+        if (!IsSessionLoaded)
+        {
+            DataSource = _device.DataSourceName;
+            _frequencyGridConvention = GetInitialFrequencyGridConvention(_device.DataSourceName);
+        }
         ConnectDeviceCommand.NotifyCanExecuteChanged();
         DisconnectDeviceCommand.NotifyCanExecuteChanged();
     }
@@ -685,15 +865,30 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         private set
         {
             if (!SetProperty(ref _isSessionLoaded, value)) return;
+            OnPropertyChanged(nameof(SmithReferenceImpedanceOhms));
             OnPropertyChanged(nameof(DataSourceDisplay));
+            OnPropertyChanged(nameof(ProfileLabel));
+            OnPropertyChanged(nameof(VisibleAmateurBands));
+            OnPropertyChanged(nameof(BandGroupHint));
+            OnPropertyChanged(nameof(CanStartScan));
             OnPropertyChanged(nameof(CanConnectDevice));
             OnPropertyChanged(nameof(MeasurementSourceHint));
             ConnectDeviceCommand.NotifyCanExecuteChanged();
+            ((AsyncRelayCommand)StartCommand).NotifyCanExecuteChanged();
         }
     }
     public bool CanLoadSession => !IsScanning && !_isDisposed;
     public bool CanSaveSession => !IsScanning && (IsAntennaMode || IsCableLossMode || IsFilterMode) &&
-                                  _lastSweep is not null && Points.Count == _lastSweep.PointCount;
+                                  IsMeasurementDataKindCompatible && _lastSweep is not null &&
+                                  Points.Count == _lastSweep.PointCount;
+    private bool IsMeasurementDataKindCompatible => _measurementDataKind switch
+    {
+        MeasurementDataKind.ScalarTransmissionMagnitude => IsFilterMode,
+        MeasurementDataKind.ReflectionDerived => !IsFilterMode,
+        _ => !IsSessionLoaded || !_loadedSessionAnalysisMode.HasValue ||
+             IsFilterMode == (_loadedSessionAnalysisMode.Value == SessionAnalysisMode.Filter),
+    };
+    private bool IsPlaybackAnalysisModeCompatible => IsMeasurementDataKindCompatible;
     public bool IsRefreshingPorts
     {
         get => _isRefreshingPorts;
@@ -704,7 +899,32 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         }
     }
     public bool CanRefreshPorts => !IsRefreshingPorts && !_isDisposed;
-    public string ProfileLabel => Profile.DisplayName;
+    public string ProfileLabel => IsSessionLoaded
+        ? _loadedSessionProfileDescriptor?.DisplayName ?? _profileSnapshot?.DisplayName ?? Profile.DisplayName
+        : _deviceProfileDescriptor?.DisplayName ?? Profile.DisplayName;
+    public string DeviceProfilesSummary => BuildDeviceProfilesSummary();
+    public bool CanStartScan => !IsScanning && !_isConnectingDevice && !_isDisposed &&
+        !IsGeneratorMode && (!IsHardwareSource || IsHardwareModeScanAvailable) &&
+        (!IsPlaybackSource || HasPlaybackSession && IsPlaybackAnalysisModeCompatible) &&
+        (!IsSessionLoaded || IsPlaybackSource || IsSessionProfileCompatibleWithActive(_loadedSessionProfileId, _loadedSessionPluginId)) &&
+        (!IsSessionLoaded || !IsPlaybackSource || IsPlaybackAnalysisModeCompatible);
+    private bool IsHardwareModeScanAvailable
+    {
+        get
+        {
+            if (IsGeneratorMode) return false;
+            var capabilityId = SelectedMode switch
+            {
+                AnalysisMode.Filter => "mode.filter",
+                AnalysisMode.CableLoss => "mode.cable-loss",
+                _ => "mode.antenna",
+            };
+            var capabilities = _deviceProfileDescriptor?.Capabilities ?? Profile.Capabilities;
+            return capabilities.FirstOrDefault(capability =>
+                       string.Equals(capability.Id, capabilityId, StringComparison.OrdinalIgnoreCase))?.Availability
+                   is DeviceCapabilityAvailability.Available or DeviceCapabilityAvailability.Partial;
+        }
+    }
     public string ConfigurationPath { get; }
     public string PortName
     {
@@ -740,6 +960,7 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
             if (!SetProperty(ref _isScanning, value)) return;
             OnPropertyChanged(nameof(CanLoadSession));
             OnPropertyChanged(nameof(CanSaveSession));
+            OnPropertyChanged(nameof(CanCaptureComparisonSnapshot));
             OnPropertyChanged(nameof(CanSelectMeasurementSource));
             OnPropertyChanged(nameof(CanConnectDevice));
             OnPropertyChanged(nameof(CanDisconnectDevice));
@@ -773,7 +994,7 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
     }
     public string ContinuousScanHint => Text.Get(IsHold ? "HoldAfterSweepHint" : "ContinuousScanHint");
     public double ScanProgressValue => _scanProgressCount;
-    public double ScanProgressMaximum => _scanProgressMaximum > 0 ? _scanProgressMaximum : Profile.DefaultPointCount;
+    public double ScanProgressMaximum => _scanProgressMaximum > 0 ? _scanProgressMaximum : ProfileDefaultPointCount;
     public string ScanProgressDisplay => Text.Format("ScanProgressFormat", ScanProgressValue, ScanProgressMaximum,
         _lastScanDuration is { } duration ? $"{duration.TotalMilliseconds.ToString("0", Localizer.Culture)} ms" : "—");
     public long? Marker1Frequency { get => _marker1; private set { if (SetProperty(ref _marker1, value)) { OnPropertyChanged(nameof(Marker1Text)); OnPropertyChanged(nameof(Marker1Readout)); OnPropertyChanged(nameof(Marker1Values)); OnPropertyChanged(nameof(CableLossMarker1Text)); OnPropertyChanged(nameof(BandwidthHz)); OnPropertyChanged(nameof(BandwidthText)); OnPropertyChanged(nameof(MarkerQEstimate)); OnPropertyChanged(nameof(MarkerQEstimateText)); OnPropertyChanged(nameof(CableLengthPairValidation)); OnPropertyChanged(nameof(CableLengthMeters)); OnPropertyChanged(nameof(CableLengthResultText)); UpdateZoomAvailability(); } } }
@@ -794,8 +1015,8 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         : $"{(BandwidthHz.Value / 1_000_000.0).ToString("0.###", Localizer.Culture)} MHz";
     public bool CanZoomToMarkers => Marker1Frequency is not null && Marker2Frequency is not null && Marker1Frequency != Marker2Frequency;
     public bool CanSetSweepRangeToMarkers => !IsScanning && !_isDisposed && CanZoomToMarkers &&
-        Math.Min(Marker1Frequency!.Value, Marker2Frequency!.Value) >= Profile.MinimumFrequencyHz &&
-        Math.Max(Marker1Frequency.Value, Marker2Frequency.Value) <= Profile.MaximumFrequencyHz;
+        Math.Min(Marker1Frequency!.Value, Marker2Frequency!.Value) >= ProfileMinimumFrequencyHz &&
+        Math.Max(Marker1Frequency.Value, Marker2Frequency.Value) <= ProfileMaximumFrequencyHz;
     public bool CanRestoreZoom => _zoomHistory.Count > 0;
     public bool CanZoomIn
     {
@@ -812,7 +1033,7 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         {
             if (_isDisposed || Points.Count < 2) return false;
             var (start, stop) = GetCurrentPlotRange();
-            return stop > start && stop - start < Profile.MaximumFrequencyHz - Profile.MinimumFrequencyHz;
+            return stop > start && stop - start < ProfileMaximumFrequencyHz - ProfileMinimumFrequencyHz;
         }
     }
     public string MinimumSwrText
@@ -884,6 +1105,7 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
     private void OnLanguageChanged(object? sender, PropertyChangedEventArgs args)
     {
         if (args.PropertyName != nameof(LocalizationService.Culture)) return;
+        foreach (var snapshot in ComparisonSnapshots) snapshot.RefreshLocalization();
         if (double.TryParse(StartMHz, NumberStyles.Float, _inputCulture, out var start) && double.IsFinite(start))
             StartMHz = start.ToString("G", Localizer.Culture);
         if (double.TryParse(StopMHz, NumberStyles.Float, _inputCulture, out var stop) && double.IsFinite(stop))
@@ -892,6 +1114,8 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
             CableVelocityFactorText = cableVf.ToString("G", Localizer.Culture);
         if (double.TryParse(ReturnLossDisplayOffsetText, NumberStyles.Float, _inputCulture, out var rlOffset) && double.IsFinite(rlOffset))
             ReturnLossDisplayOffsetText = rlOffset.ToString("G", Localizer.Culture);
+        if (double.TryParse(SmithFixedSwrText, NumberStyles.Float, _inputCulture, out var smithSwr) && double.IsFinite(smithSwr))
+            SmithFixedSwrText = smithSwr.ToString("G", Localizer.Culture);
         ResonanceFrequencyMHz = ReformatFrequency(ResonanceFrequencyMHz, _inputCulture, Localizer.Culture);
         LowerEdgeMHz = ReformatFrequency(LowerEdgeMHz, _inputCulture, Localizer.Culture);
         UpperEdgeMHz = ReformatFrequency(UpperEdgeMHz, _inputCulture, Localizer.Culture);
@@ -905,9 +1129,85 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         foreach (var property in new[] { nameof(SelectedLanguage), nameof(Status), nameof(Error), nameof(HasError),
                      nameof(DataSourceDisplay), nameof(MarkerHint), nameof(Marker1Text), nameof(Marker2Text),
                      nameof(Marker1Readout), nameof(Marker2Readout), nameof(Marker1Values), nameof(Marker2Values),
-                     nameof(MinimumSwrText), nameof(ModeUnavailableMessage), nameof(BandGroupHint), nameof(ContinuousScanHint), nameof(MeasurementSourceHint), nameof(CurrentFileDisplay), nameof(MarkerQEstimateText), nameof(BandwidthText), nameof(ScanProgressDisplay), nameof(CableLengthResultText), nameof(ResonanceQResultText) })
+                     nameof(MinimumSwrText), nameof(ModeUnavailableMessage), nameof(BandGroupHint), nameof(ContinuousScanHint), nameof(MeasurementSourceHint), nameof(CurrentFileDisplay), nameof(MarkerQEstimateText), nameof(BandwidthText), nameof(ScanProgressDisplay), nameof(CableLengthResultText), nameof(ResonanceQResultText), nameof(DeviceProfilesSummary) })
             OnPropertyChanged(property);
     }
+
+    private string BuildDeviceProfilesSummary()
+    {
+        var plugins = _devicePluginCatalog?.Descriptors;
+        if (plugins is not { Count: > 0 }) return Text.Get("DeviceProfilesNoRegisteredPlugins");
+
+        var summary = new StringBuilder();
+        foreach (var plugin in plugins)
+        {
+            if (summary.Length > 0) summary.AppendLine();
+            summary.AppendLine(Text.Format("DevicePluginSummaryFormat", plugin.DisplayName, plugin.Id));
+            foreach (var profile in plugin.Profiles)
+            {
+                var minimumMHz = (profile.MinimumFrequencyHz / 1_000_000d).ToString("0.###", Localizer.Culture);
+                var maximumMHz = (profile.MaximumFrequencyHz / 1_000_000d).ToString("0.###", Localizer.Culture);
+                var reference = profile.ReferenceImpedanceOhms is { } z0 && double.IsFinite(z0) && z0 > 0
+                    ? z0.ToString("0.##", Localizer.Culture)
+                    : Text.Get("DeviceProfilesUnknownReference");
+                summary.AppendLine(Text.Format("DeviceProfileSummaryFormat", profile.DisplayName,
+                    profile.Id, minimumMHz, maximumMHz, profile.DefaultPointCount, reference));
+
+                foreach (var capability in profile.Capabilities)
+                {
+                    summary.Append("    • ");
+                    summary.AppendLine(Text.Format("DeviceCapabilitySummaryFormat",
+                        GetCapabilityKindText(capability.Kind), GetCapabilityIdText(capability.Id),
+                        GetCapabilityAvailabilityText(capability.Availability),
+                        GetCapabilityEvidenceText(capability.Evidence)));
+                }
+            }
+        }
+
+        return summary.ToString().TrimEnd();
+    }
+
+    private static string GetCapabilityKindText(DeviceCapabilityKind kind) => kind switch
+    {
+        DeviceCapabilityKind.AnalysisMode => Text.Get("DeviceCapabilityKindAnalysisMode"),
+        DeviceCapabilityKind.DeviceCommand => Text.Get("DeviceCapabilityKindDeviceCommand"),
+        DeviceCapabilityKind.ApplicationTool => Text.Get("DeviceCapabilityKindApplicationTool"),
+        _ => Text.Get("DeviceCapabilityKindUnknown"),
+    };
+
+    private static string GetCapabilityIdText(string id) => id switch
+    {
+        "mode.antenna" => Text.Get("ModeAntenna"),
+        "mode.cable-loss" => Text.Get("ModeCableLoss"),
+        "tool.cable-length" => Text.Get("ModeCableLength"),
+        "tool.manual-quartz-q" => Text.Get("DeviceCapabilityManualQuartzQ"),
+        "mode.filter" => Text.Get("ModeFilter"),
+        "mode.generator" => Text.Get("ModeGenerator"),
+        "command.filter-sweep" => Text.Get("DeviceCapabilityFilterSweep"),
+        "command.generator-output" => Text.Get("DeviceCapabilityGeneratorOutput"),
+        "tool.scan-cancellation" => Text.Get("DeviceCapabilityScanCancellation"),
+        _ => id,
+    };
+
+    private static string GetCapabilityAvailabilityText(DeviceCapabilityAvailability availability) => availability switch
+    {
+        DeviceCapabilityAvailability.Available => Text.Get("DeviceCapabilityAvailabilityAvailable"),
+        DeviceCapabilityAvailability.Partial => Text.Get("DeviceCapabilityAvailabilityPartial"),
+        DeviceCapabilityAvailability.Blocked => Text.Get("DeviceCapabilityAvailabilityBlocked"),
+        _ => Text.Get("DeviceCapabilityAvailabilityUnknown"),
+    };
+
+    private static string GetCapabilityEvidenceText(DeviceEvidenceLevel evidence) => evidence switch
+    {
+        DeviceEvidenceLevel.ProfileDataOnly => Text.Get("DeviceCapabilityEvidenceProfileDataOnly"),
+        DeviceEvidenceLevel.RelatedModelOnly => Text.Get("DeviceCapabilityEvidenceRelatedModelOnly"),
+        DeviceEvidenceLevel.ApplicationLogicPresent => Text.Get("DeviceCapabilityEvidenceApplicationLogicPresent"),
+        DeviceEvidenceLevel.SourceCodeInspected => Text.Get("DeviceCapabilityEvidenceSourceCodeInspected"),
+        DeviceEvidenceLevel.UserReportedOnDevice => Text.Get("DeviceCapabilityEvidenceUserReportedOnDevice"),
+        DeviceEvidenceLevel.LabelObserved => Text.Get("DeviceCapabilityEvidenceLabelObserved"),
+        DeviceEvidenceLevel.ReferenceMeasured => Text.Get("DeviceCapabilityEvidenceReferenceMeasured"),
+        _ => Text.Get("DeviceCapabilityEvidenceUnknown"),
+    };
 
     public async Task RefreshPortNamesAsync(CancellationToken cancellationToken = default)
     {
@@ -976,11 +1276,11 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         if (zoomIn ? !CanZoomIn : !CanZoomOut) return;
         var (start, stop) = GetCurrentPlotRange();
         var span = stop - start;
-        var fullSpan = Profile.MaximumFrequencyHz - Profile.MinimumFrequencyHz;
+        var fullSpan = ProfileMaximumFrequencyHz - ProfileMinimumFrequencyHz;
         var targetSpan = zoomIn ? Math.Max(1, span / 2)
             : span > fullSpan / 2 ? fullSpan : span * 2;
         var targetStart = Math.Clamp(start + (span - targetSpan) / 2,
-            Profile.MinimumFrequencyHz, Profile.MaximumFrequencyHz - targetSpan);
+            ProfileMinimumFrequencyHz, ProfileMaximumFrequencyHz - targetSpan);
         var targetStop = targetStart + targetSpan;
         if (targetStart == start && targetStop == stop) return;
         _zoomHistory.Push((ViewStartHz, ViewStopHz));
@@ -994,11 +1294,11 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         if (deltaHz == 0 || Points.Count < 2) return;
         var (start, stop) = GetCurrentPlotRange();
         var span = stop - start;
-        var profileSpan = Profile.MaximumFrequencyHz - Profile.MinimumFrequencyHz;
+        var profileSpan = ProfileMaximumFrequencyHz - ProfileMinimumFrequencyHz;
         if (span <= 0 || span >= profileSpan) return;
 
-        var minimumStart = Profile.MinimumFrequencyHz;
-        var maximumStart = Profile.MaximumFrequencyHz - span;
+        var minimumStart = ProfileMinimumFrequencyHz;
+        var maximumStart = ProfileMaximumFrequencyHz - span;
         var targetStart = deltaHz > 0 && deltaHz > maximumStart - start
             ? maximumStart
             : deltaHz < 0 && deltaHz < minimumStart - start
@@ -1075,18 +1375,18 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
 
     private void ShowProfileRange()
     {
-        if (ViewStartHz == Profile.MinimumFrequencyHz && ViewStopHz == Profile.MaximumFrequencyHz) return;
+        if (ViewStartHz == ProfileMinimumFrequencyHz && ViewStopHz == ProfileMaximumFrequencyHz) return;
         _zoomHistory.Push((ViewStartHz, ViewStopHz));
-        ViewStartHz = Profile.MinimumFrequencyHz;
-        ViewStopHz = Profile.MaximumFrequencyHz;
+        ViewStartHz = ProfileMinimumFrequencyHz;
+        ViewStopHz = ProfileMaximumFrequencyHz;
         UpdateZoomHistoryAvailability();
     }
 
     private void SetFullSweepRange()
     {
         if (IsScanning || _isDisposed) return;
-        StartMHz = (Profile.MinimumFrequencyHz / 1_000_000d).ToString("0.######", Localizer.Culture);
-        StopMHz = (Profile.MaximumFrequencyHz / 1_000_000d).ToString("0.######", Localizer.Culture);
+        StartMHz = (ProfileMinimumFrequencyHz / 1_000_000d).ToString("0.######", Localizer.Culture);
+        StopMHz = (ProfileMaximumFrequencyHz / 1_000_000d).ToString("0.######", Localizer.Culture);
     }
 
     private void SetSweepRangeToMarkers()
@@ -1123,8 +1423,49 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
 
     private void ApplyProfilePalette(DeviceProfile profile)
     {
-        PlotPalette = Vna.App.Plotting.PlotPalette.FromProfile(profile, SelectedTheme.Kind, _traceColorOverrides);
-        foreach (var trace in Traces) trace.ApplyPalette(PlotPalette);
+        var defaultPalette = Vna.App.Plotting.PlotPalette.FromProfile(profile, AppThemeKind.Light);
+        var themedPalette = Vna.App.Plotting.PlotPalette.FromProfile(profile, SelectedTheme.Kind, _traceColorOverrides);
+        ApplyProfilePalette(defaultPalette, themedPalette);
+    }
+
+    private void ApplyProfilePalette(DeviceProfileDescriptor profile)
+    {
+        var defaultPalette = Vna.App.Plotting.PlotPalette.FromPresentation(
+            profile.Presentation, AppThemeKind.Light);
+        var themedPalette = Vna.App.Plotting.PlotPalette.FromPresentation(
+            profile.Presentation, SelectedTheme.Kind, _traceColorOverrides);
+        ApplyProfilePalette(defaultPalette, themedPalette);
+    }
+
+    private void ApplyProfilePalette(PlotPalette defaultPalette, PlotPalette themedPalette)
+    {
+        PlotPalette = themedPalette;
+        _updatingTraceColors = true;
+        try
+        {
+            foreach (var trace in Traces)
+            {
+                var defaultColor = defaultPalette.GetColor(trace.Trace);
+                trace.ApplyProfileColors(defaultColor,
+                    _traceColorOverrides.GetValueOrDefault(trace.Trace, defaultColor));
+                trace.ApplyPalette(PlotPalette);
+            }
+        }
+        finally { _updatingTraceColors = false; }
+        RefreshComparisonSnapshotColors();
+    }
+
+    private void ApplyDeviceProfilePalette()
+    {
+        if (_deviceProfileDescriptor is { } descriptor) ApplyProfilePalette(descriptor);
+        else ApplyProfilePalette(Profile);
+    }
+
+    private void ApplyCurrentProfilePalette()
+    {
+        if (IsSessionLoaded && _loadedSessionProfileDescriptor is { } descriptor) ApplyProfilePalette(descriptor);
+        else if (IsSessionLoaded && _profileSnapshot is { } snapshot) ApplyProfilePalette(snapshot);
+        else ApplyDeviceProfilePalette();
     }
 
     private void SetTraceColorOverride(PlotTrace trace, string color)
@@ -1136,7 +1477,7 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
             _traceColorOverrides.Remove(trace);
         else
             _traceColorOverrides[trace] = normalized;
-        ApplyProfilePalette(_profileSnapshot ?? Profile);
+        ApplyCurrentProfilePalette();
     }
 
     private void ApplyTraceColorOverrides(IReadOnlyDictionary<string, string>? colors)
@@ -1152,7 +1493,7 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
                 trace.SelectedColor = _traceColorOverrides.GetValueOrDefault(trace.Trace, trace.DefaultColor);
         }
         finally { _updatingTraceColors = false; }
-        ApplyProfilePalette(_profileSnapshot ?? Profile);
+        ApplyCurrentProfilePalette();
     }
 
     private static Dictionary<PlotTrace, string> ParseTraceColorOverrides(IReadOnlyDictionary<string, string>? colors)
@@ -1215,12 +1556,109 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
 
     public MeasurementSession? CreateSession()
     {
-        if (!(IsAntennaMode || IsCableLossMode || IsFilterMode) || _lastSweep is null || Points.Count != _lastSweep.PointCount) return null;
-        return new MeasurementSession(MeasurementSessionFile.CurrentFormatVersion, Profile.Id, DataSource, _capturedAtUtc, _lastSweep, Points.ToArray())
+        if (!(IsAntennaMode || IsCableLossMode || IsFilterMode) || !IsMeasurementDataKindCompatible ||
+            _lastSweep is null || Points.Count != _lastSweep.PointCount) return null;
+        var sessionProfileId = IsSessionLoaded ? _loadedSessionProfileId ?? ProfileId : ProfileId;
+        return new MeasurementSession(MeasurementSessionFile.CurrentFormatVersion, sessionProfileId, DataSource, _capturedAtUtc, _lastSweep, Points.ToArray())
         {
-            ProfileSnapshot = _profileSnapshot,
+            PluginId = IsSessionLoaded ? _loadedSessionPluginId : _device.DevicePluginId,
+            ProfileDescriptorSnapshot = IsSessionLoaded ? _loadedSessionProfileDescriptor : _deviceProfileDescriptor,
+            ProfileSnapshot = IsSessionLoaded ? _profileSnapshot : null,
             AnalysisMode = Enum.Parse<SessionAnalysisMode>(SelectedMode.ToString()),
+            FrequencyGridConvention = _frequencyGridConvention,
+            MeasurementDataKind = _measurementDataKind,
+            CalibrationSnapshot = _calibrationSnapshot,
         };
+    }
+
+    public NamedMeasurementSnapshot? CreateComparisonSnapshot(string name)
+    {
+        if (!CanSaveSession || string.IsNullOrWhiteSpace(name) || name.Trim().Length > 120) return null;
+        var session = CreateSession();
+        return session is null ? null : NamedMeasurementSnapshot.Create(name, session, _returnLossDisplayOffsetDb);
+    }
+
+    public void AddComparisonSnapshot(NamedMeasurementSnapshot snapshot)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+        if (!snapshot.Session.IsReflectionComparisonCompatible)
+            throw LocalizedErrors.InvalidData("SnapshotReflectionRequired");
+        var color = GetComparisonColor(ComparisonSnapshots.Count);
+        var option = new ComparisonSnapshotOption(snapshot, color);
+        option.PropertyChanged += (_, args) =>
+        {
+            if (args.PropertyName is nameof(ComparisonSnapshotOption.IsVisible) or nameof(ComparisonSnapshotOption.Color))
+            {
+                OnPropertyChanged(nameof(SmithComparisonOverlays));
+                OnPropertyChanged(nameof(FrequencyComparisonOverlays));
+            }
+        };
+        ComparisonSnapshots.Add(option);
+    }
+
+    private void ClearComparisonSnapshots()
+    {
+        ComparisonSnapshots.Clear();
+        OnPropertyChanged(nameof(SmithComparisonOverlays));
+    }
+
+    private string GetComparisonColor(int index)
+    {
+        PlotTrace[] colors = [PlotTrace.Swr, PlotTrace.ReturnLoss, PlotTrace.Phase,
+            PlotTrace.Impedance, PlotTrace.Resistance, PlotTrace.Reactance];
+        return PlotPalette.GetColor(colors[index % colors.Length]);
+    }
+
+    private void RefreshComparisonSnapshotColors()
+    {
+        for (var index = 0; index < ComparisonSnapshots.Count; index++)
+            ComparisonSnapshots[index].UpdateColor(GetComparisonColor(index));
+        OnPropertyChanged(nameof(SmithComparisonOverlays));
+        OnPropertyChanged(nameof(FrequencyComparisonOverlays));
+    }
+
+    private static double? GetSnapshotReferenceImpedance(MeasurementSession session) =>
+        session.ProfileDescriptorSnapshot is { } descriptor
+            ? descriptor.ReferenceImpedanceOhms
+            : session.ProfileSnapshot?.ReferenceImpedanceOhms;
+
+    private static IReadOnlyList<MeasurementPoint> GetSnapshotDisplayPoints(NamedMeasurementSnapshot snapshot)
+    {
+        var session = snapshot.Session;
+        var displayOffset = snapshot.DisplayReturnLossOffsetDb;
+        var referenceImpedance = GetSnapshotReferenceImpedance(session);
+        return displayOffset == 0 || referenceImpedance is not { } zref || !double.IsFinite(displayOffset)
+            ? session.Points
+            : Array.AsReadOnly(session.Points.Select(point => ApplyReturnLossDisplayOffset(point, displayOffset, zref)).ToArray());
+    }
+
+    private static FrequencyGridConvention GetInitialFrequencyGridConvention(string dataSource) =>
+        string.Equals(dataSource, "demo", StringComparison.OrdinalIgnoreCase)
+            ? FrequencyGridConvention.StartInclusive
+            : FrequencyGridConvention.Unknown;
+
+    private static MeasurementDataKind GetMeasurementDataKind(AnalysisMode mode) =>
+        mode == AnalysisMode.Filter
+            ? MeasurementDataKind.ScalarTransmissionMagnitude
+            : MeasurementDataKind.ReflectionDerived;
+
+    private void ValidateSweepAgainstProfile(SweepSettings sweep)
+    {
+        if (IsSessionLoaded && IsPlaybackSource)
+        {
+            if (_loadedSessionProfileDescriptor is { } savedDescriptor)
+                sweep.ValidateAgainst(savedDescriptor);
+            else if (_profileSnapshot is { } savedProfile)
+                sweep.ValidateAgainst(savedProfile);
+            else
+                sweep.ValidateAgainst(Profile);
+            return;
+        }
+
+        if (IsSessionLoaded && !IsSessionProfileCompatibleWithActive(_loadedSessionProfileId, _loadedSessionPluginId))
+            throw LocalizedErrors.InvalidData("SessionProfilePlaybackRequired");
+        if (_deviceProfileDescriptor is { } descriptor) sweep.ValidateAgainst(descriptor);
+        else sweep.ValidateAgainst(Profile);
     }
 
     public void LoadSession(MeasurementSession session)
@@ -1228,10 +1666,27 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         ArgumentNullException.ThrowIfNull(session);
         if (IsScanning)
             throw LocalizedErrors.InvalidOperation("SessionStopFirst");
-        if (!string.Equals(session.ProfileId, Profile.Id, StringComparison.Ordinal))
-            throw LocalizedErrors.InvalidData("SessionProfileMismatch", session.ProfileId, Profile.Id);
-
-        session.Sweep.ValidateAgainst(Profile);
+        var activeProfileMatches = IsSessionProfileCompatibleWithActive(session.ProfileId, session.PluginId);
+        var descriptor = session.ProfileDescriptorSnapshot;
+        if (session.ProfileSnapshot is { } legacySnapshot &&
+            !string.Equals(legacySnapshot.Id, session.ProfileId, StringComparison.Ordinal))
+            throw LocalizedErrors.InvalidData("SessionSnapshotInvalid");
+        if (descriptor is not null && !string.Equals(descriptor.Id, session.ProfileId, StringComparison.Ordinal))
+            throw LocalizedErrors.InvalidData("SessionDescriptorSnapshotInvalid");
+        if (!activeProfileMatches && descriptor is null && session.ProfileSnapshot is null)
+        {
+            if (session.PluginId is not null &&
+                string.Equals(session.ProfileId, ProfileId, StringComparison.Ordinal))
+                throw LocalizedErrors.InvalidData("SessionPluginMismatch", session.PluginId);
+            throw LocalizedErrors.InvalidData("SessionProfileMismatch", session.ProfileId, ProfileId);
+        }
+        if (descriptor is not null) session.Sweep.ValidateAgainst(descriptor);
+        else if (session.ProfileSnapshot is { } legacyProfile)
+        {
+            session.Sweep.ValidateAgainst(legacyProfile);
+        }
+        else if (_deviceProfileDescriptor is { } activeDescriptor) session.Sweep.ValidateAgainst(activeDescriptor);
+        else session.Sweep.ValidateAgainst(Profile);
         if (session.Points.Count != session.Sweep.PointCount)
             throw LocalizedErrors.InvalidData("SessionSampleCountMismatch");
 
@@ -1251,11 +1706,18 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
                                           string.Equals(session.DataSource, "hardware", StringComparison.OrdinalIgnoreCase);
 
         _profileSnapshot = session.ProfileSnapshot;
-        OnPropertyChanged(nameof(SmithReferenceImpedanceOhms));
-        ApplyProfilePalette(_profileSnapshot ?? Profile);
+        _loadedSessionProfileDescriptor = descriptor;
+        _loadedSessionProfileId = session.ProfileId;
+        _loadedSessionPluginId = session.PluginId;
+        _loadedSessionAnalysisMode = session.AnalysisMode;
+        _frequencyGridConvention = session.FrequencyGridConvention;
+        _measurementDataKind = session.MeasurementDataKind;
+        _calibrationSnapshot = session.CalibrationSnapshot;
+        if (descriptor is not null) ApplyProfilePalette(descriptor);
+        else if (_profileSnapshot is { } snapshot) ApplyProfilePalette(snapshot);
+        else ApplyDeviceProfilePalette();
         Points.Clear();
         foreach (var point in session.Points) Points.Add(point);
-        RefreshMeasurementViews();
         StartMHz = (session.Sweep.StartFrequencyHz / 1_000_000.0).ToString("0.###", Localizer.Culture);
         StopMHz = (session.Sweep.StopFrequencyHz / 1_000_000.0).ToString("0.###", Localizer.Culture);
         PointCount = session.Sweep.PointCount.ToString(Localizer.Culture);
@@ -1264,6 +1726,15 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         SelectedMode = Enum.Parse<AnalysisMode>(session.AnalysisMode.ToString());
         DataSource = string.IsNullOrWhiteSpace(session.DataSource) ? "unknown" : session.DataSource;
         IsSessionLoaded = true;
+        OnPropertyChanged(nameof(ProfileLabel));
+        OnPropertyChanged(nameof(VisibleAmateurBands));
+        OnPropertyChanged(nameof(BandGroupHint));
+        OnPropertyChanged(nameof(SmithReferenceImpedanceOhms));
+        OnPropertyChanged(nameof(MeasurementSourceHint));
+        OnPropertyChanged(nameof(CanStartScan));
+        OnPropertyChanged(nameof(CanSaveSession));
+        ((AsyncRelayCommand)StartCommand).NotifyCanExecuteChanged();
+        RefreshMeasurementViews();
         _currentSessionFileName = null;
         _hasUnsavedResult = false;
         OnPropertyChanged(nameof(CurrentFileDisplay));
@@ -1316,11 +1787,26 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
 
     private MeasurementPoint ApplyReturnLossDisplayOffset(MeasurementPoint point)
     {
-        if (_returnLossDisplayOffsetDb == 0 || point.Quality != SampleQuality.Valid ||
+        var referenceImpedanceOhms = IsSessionLoaded
+            ? _loadedSessionProfileDescriptor?.ReferenceImpedanceOhms ??
+              (_loadedSessionProfileDescriptor is null ? _profileSnapshot?.ReferenceImpedanceOhms : null)
+            : _deviceProfileDescriptor is { } activeDescriptor
+                ? activeDescriptor.ReferenceImpedanceOhms
+                : Profile.ReferenceImpedanceOhms;
+        return ApplyReturnLossDisplayOffset(point, _returnLossDisplayOffsetDb, referenceImpedanceOhms);
+    }
+
+    private static MeasurementPoint ApplyReturnLossDisplayOffset(
+        MeasurementPoint point, double displayOffsetDb, double? referenceImpedanceOhms)
+    {
+        if (displayOffsetDb == 0 || point.Quality != SampleQuality.Valid ||
             point.ReturnLossDb is not { } returnLossDb || point.PhaseDegrees is not { } phaseDegrees)
             return point;
+        if (referenceImpedanceOhms is not { } knownReferenceImpedanceOhms)
+            return point;
         return RfSampleCalculator.FromReturnLossAndPhase(
-            point.FrequencyHz, returnLossDb + _returnLossDisplayOffsetDb, phaseDegrees, _profileSnapshot ?? Profile) with
+            point.FrequencyHz, returnLossDb + displayOffsetDb, phaseDegrees,
+            knownReferenceImpedanceOhms) with
         {
             PhaseSignConfidence = point.PhaseSignConfidence,
             PhaseSignProvenance = point.PhaseSignProvenance,
@@ -1378,10 +1864,13 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
             : "—";
     }
 
-    private static double GetCableVelocityFactor(double? configuredValue, DeviceProfile profile) =>
+    private static double? GetCableVelocityFactor(double? configuredValue, DeviceProfileDescriptor? descriptor) =>
         configuredValue is { } value && double.IsFinite(value) && value is > 0 and <= 1
             ? value
-            : profile.LegacyCalibration.InputVelocityFactor;
+            : descriptor?.Presentation.DefaultCableVelocityFactor;
+
+    private static string FormatCableVelocityFactor(double? value, CultureInfo culture) =>
+        value is { } velocityFactor ? velocityFactor.ToString("0.###", culture) : string.Empty;
 
     private static double? TryParseCableVelocityFactor(string? text, CultureInfo culture) =>
         double.TryParse(text, NumberStyles.Float, culture, out var value) && double.IsFinite(value) && value is > 0 and <= 1
@@ -1471,7 +1960,7 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
 
     private async Task StartScanAsync()
     {
-        if (_isDisposed || IsConnectingDevice) return;
+        if (!CanStartScan) return;
         var scanStopped = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         _scanStopped = scanStopped;
         OnPropertyChanged(nameof(ScanProgressDisplay));
@@ -1483,7 +1972,7 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         try
         {
             var settings = CreateSweepSettings();
-            settings.ValidateAgainst(Profile);
+            ValidateSweepAgainstProfile(settings);
             IsScanning = true;
             SetStatus(IsDeviceConnected ? AcquisitionStatusKey : ConnectingStatusKey);
             _scanCancellation = new CancellationTokenSource();
@@ -1519,24 +2008,51 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
                 // Each repetition commits atomically. Cancellation or failure in the next scan
                 // leaves the previous complete plot, session and duration intact.
                 var sweepChanged = _lastSweep != settings;
+                var replayingLoadedSession = IsSessionLoaded && IsPlaybackSource;
                 _lastSweep = settings;
-                _profileSnapshot = Profile;
+                if (!replayingLoadedSession)
+                {
+                    DataSource = _device.DataSourceName;
+                    _profileSnapshot = Profile;
+                    _loadedSessionProfileDescriptor = null;
+                    _loadedSessionProfileId = null;
+                    _loadedSessionPluginId = null;
+                    _loadedSessionAnalysisMode = null;
+                    IsSessionLoaded = false;
+                    OnPropertyChanged(nameof(ProfileLabel));
+                    _frequencyGridConvention = GetInitialFrequencyGridConvention(_device.DataSourceName);
+                    if (!IsPlaybackSource)
+                    {
+                        _measurementDataKind = GetMeasurementDataKind(SelectedMode);
+                        _calibrationSnapshot = MeasurementCalibrationSnapshot.Capture(
+                            Enum.Parse<SessionAnalysisMode>(SelectedMode.ToString()),
+                            _measurementDataKind,
+                            hardwareSource: _measurementSourceMode == DeviceSourceMode.Hardware,
+                            syntheticSource: _measurementSourceMode == DeviceSourceMode.Demo,
+                            ReturnLossDisplayOffsetDb,
+                            _device.AppliedReflectionCalibration);
+                    }
+                    _capturedAtUtc = DateTimeOffset.UtcNow;
+                    ApplyDeviceProfilePalette();
+                }
                 OnPropertyChanged(nameof(SmithReferenceImpedanceOhms));
-                ApplyProfilePalette(Profile);
-                DataSource = _device.DataSourceName;
-                IsSessionLoaded = false;
-                _capturedAtUtc = DateTimeOffset.UtcNow;
                 _cableLossHardwareDataAvailable = _measurementSourceMode == DeviceSourceMode.Hardware &&
                                                   SelectedMode == AnalysisMode.CableLoss;
                 Points.Clear();
                 foreach (var point in pendingPoints) Points.Add(point);
                 RefreshMeasurementViews();
+                var completedSessionProfileId = IsSessionLoaded ? _loadedSessionProfileId ?? ProfileId : ProfileId;
                 (_device as ISessionPlaybackSource)?.SetSession(new MeasurementSession(
-                    MeasurementSessionFile.CurrentFormatVersion, Profile.Id, _device.DataSourceName,
+                    MeasurementSessionFile.CurrentFormatVersion, completedSessionProfileId, DataSource,
                     _capturedAtUtc, settings, pendingPoints.ToArray())
                 {
-                    ProfileSnapshot = _profileSnapshot,
+                    PluginId = IsSessionLoaded ? _loadedSessionPluginId : _device.DevicePluginId,
+                    ProfileDescriptorSnapshot = IsSessionLoaded ? _loadedSessionProfileDescriptor : _deviceProfileDescriptor,
+                    ProfileSnapshot = IsSessionLoaded ? _profileSnapshot : null,
                     AnalysisMode = Enum.Parse<SessionAnalysisMode>(SelectedMode.ToString()),
+                    FrequencyGridConvention = _frequencyGridConvention,
+                    MeasurementDataKind = _measurementDataKind,
+                    CalibrationSnapshot = _calibrationSnapshot,
                 });
                 OnPropertyChanged(nameof(CanConnectDevice));
                 ConnectDeviceCommand.NotifyCanExecuteChanged();
@@ -1545,7 +2061,7 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
                 _lastScanDuration = Stopwatch.GetElapsedTime(scanStartedAt);
                 OnPropertyChanged(nameof(ScanProgressDisplay));
                 OnPropertyChanged(nameof(ScanProgressMaximum));
-                MarkResultUnsaved();
+                if (!replayingLoadedSession) MarkResultUnsaved();
                 SetStatus("StatusScanComplete", pendingPoints.Count);
 
                 if (!IsContinuousScan || IsHold) break;

@@ -74,7 +74,38 @@ public sealed class PlotPalette
         IReadOnlyDictionary<PlotTrace, string>? traceColorOverrides = null)
     {
         ArgumentNullException.ThrowIfNull(profile);
-        var colors = profile.PlotColors;
+        return FromColors(profile.PlotColors, theme, traceColorOverrides);
+    }
+
+    public static PlotPalette FromPresentation(
+        DeviceProfilePresentationDescriptor presentation,
+        AppThemeKind theme = AppThemeKind.Light,
+        IReadOnlyDictionary<PlotTrace, string>? traceColorOverrides = null)
+    {
+        ArgumentNullException.ThrowIfNull(presentation);
+        var defaults = LegacyPlotColorSettings.Default;
+        uint ColorRef(string key, uint fallback)
+        {
+            if (!presentation.TraceColors.TryGetValue(key, out var value)) return fallback;
+            var color = Color.Parse(value);
+            return (uint)(color.R | color.G << 8 | color.B << 16);
+        }
+
+        return FromColors(new LegacyPlotColorSettings(
+            ColorRef(nameof(PlotTrace.Phase), defaults.Phase),
+            ColorRef(nameof(PlotTrace.ReturnLoss), defaults.ReturnLoss),
+            ColorRef(nameof(PlotTrace.Reactance), defaults.Reactance),
+            ColorRef(nameof(PlotTrace.Resistance), defaults.Resistance),
+            ColorRef(nameof(PlotTrace.Impedance), defaults.Impedance),
+            ColorRef(nameof(PlotTrace.Swr), defaults.Swr),
+            ColorRef("Background", defaults.Background)), theme, traceColorOverrides);
+    }
+
+    private static PlotPalette FromColors(
+        LegacyPlotColorSettings colors,
+        AppThemeKind theme,
+        IReadOnlyDictionary<PlotTrace, string>? traceColorOverrides)
+    {
         if (traceColorOverrides is not null)
         {
             uint ColorRef(PlotTrace trace, uint original)

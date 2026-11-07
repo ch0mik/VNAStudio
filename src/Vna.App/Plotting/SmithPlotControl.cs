@@ -8,6 +8,8 @@ using Vna.Localization;
 
 namespace Vna.App.Plotting;
 
+public enum SmithSwrCircleMode { Hidden, Fixed, Marker1 }
+
 /// <summary>Responsive, vector Smith impedance chart. Marker interaction is added by the view-model stage.</summary>
 public sealed class SmithPlotControl : Control
 {
@@ -17,6 +19,7 @@ public sealed class SmithPlotControl : Control
     private bool _isPanning;
     private bool? _activeMarker2;
     private Point _lastPointerPosition;
+    private Point? _hoverPosition;
 
     public SmithPlotControl() => Focusable = true;
 
@@ -27,6 +30,9 @@ public sealed class SmithPlotControl : Control
 
     public static readonly StyledProperty<IReadOnlyList<MeasurementPoint>> PointsProperty =
         AvaloniaProperty.Register<SmithPlotControl, IReadOnlyList<MeasurementPoint>>(nameof(Points), Array.Empty<MeasurementPoint>());
+    public static readonly StyledProperty<IReadOnlyList<SmithComparisonOverlay>> ComparisonOverlaysProperty =
+        AvaloniaProperty.Register<SmithPlotControl, IReadOnlyList<SmithComparisonOverlay>>(
+            nameof(ComparisonOverlays), Array.Empty<SmithComparisonOverlay>());
     public static readonly StyledProperty<double?> ReferenceImpedanceOhmsProperty =
         AvaloniaProperty.Register<SmithPlotControl, double?>(nameof(ReferenceImpedanceOhms));
     public static readonly StyledProperty<PlotPalette> PaletteProperty =
@@ -51,13 +57,22 @@ public sealed class SmithPlotControl : Control
         AvaloniaProperty.Register<SmithPlotControl, double>(nameof(PanReal));
     public static readonly StyledProperty<double> PanImaginaryProperty =
         AvaloniaProperty.Register<SmithPlotControl, double>(nameof(PanImaginary));
+    public static readonly StyledProperty<SmithSwrCircleMode> SwrCircleModeProperty =
+        AvaloniaProperty.Register<SmithPlotControl, SmithSwrCircleMode>(nameof(SwrCircleMode));
+    public static readonly StyledProperty<double?> FixedSwrProperty =
+        AvaloniaProperty.Register<SmithPlotControl, double?>(nameof(FixedSwr));
 
-    static SmithPlotControl() => AffectsRender<SmithPlotControl>(PointsProperty, ReferenceImpedanceOhmsProperty,
+    static SmithPlotControl() => AffectsRender<SmithPlotControl>(PointsProperty, ComparisonOverlaysProperty, ReferenceImpedanceOhmsProperty,
         PaletteProperty, LanguageCodeProperty, Marker1FrequencyProperty, Marker2FrequencyProperty,
         ShowMarker1Property, ShowMarker2Property, ViewStartHzProperty, ViewStopHzProperty,
-        ZoomProperty, PanRealProperty, PanImaginaryProperty);
+        ZoomProperty, PanRealProperty, PanImaginaryProperty, SwrCircleModeProperty, FixedSwrProperty);
 
     public IReadOnlyList<MeasurementPoint> Points { get => GetValue(PointsProperty); set => SetValue(PointsProperty, value); }
+    public IReadOnlyList<SmithComparisonOverlay> ComparisonOverlays
+    {
+        get => GetValue(ComparisonOverlaysProperty);
+        set => SetValue(ComparisonOverlaysProperty, value);
+    }
     public double? ReferenceImpedanceOhms { get => GetValue(ReferenceImpedanceOhmsProperty); set => SetValue(ReferenceImpedanceOhmsProperty, value); }
     public PlotPalette Palette { get => GetValue(PaletteProperty); set => SetValue(PaletteProperty, value); }
     public string LanguageCode { get => GetValue(LanguageCodeProperty); set => SetValue(LanguageCodeProperty, value); }
@@ -70,6 +85,8 @@ public sealed class SmithPlotControl : Control
     public double Zoom { get => GetValue(ZoomProperty); set => SetValue(ZoomProperty, value); }
     public double PanReal { get => GetValue(PanRealProperty); set => SetValue(PanRealProperty, value); }
     public double PanImaginary { get => GetValue(PanImaginaryProperty); set => SetValue(PanImaginaryProperty, value); }
+    public SmithSwrCircleMode SwrCircleMode { get => GetValue(SwrCircleModeProperty); set => SetValue(SwrCircleModeProperty, value); }
+    public double? FixedSwr { get => GetValue(FixedSwrProperty); set => SetValue(FixedSwrProperty, value); }
 
     public int CountOutsideUnitCircle => Points.Count(point =>
         IsInCurrentRange(point) && point.Quality == SampleQuality.Valid && TryGetCandidates(point, out var reflection, out var mirror) &&
@@ -97,14 +114,20 @@ public sealed class SmithPlotControl : Control
         var borderPen = new Pen(new SolidColorBrush(Color.Parse(Palette.Border)), 1.2);
 
         context.DrawEllipse(null, borderPen, circle);
+        var hasSwrCircle = TryGetSwrCircle(out var swrCircleValue, out var swrCircleMagnitude);
         using (context.PushGeometryClip(new EllipseGeometry(circle)))
         {
             foreach (var curve in NormalizedGrid)
                 DrawCurve(context, curve.Points, transform, plot, gridPen, close: false);
+            if (hasSwrCircle) DrawSwrCircle(context, transform, plot, swrCircleMagnitude);
+            DrawComparisonData(context, transform, plot);
             DrawData(context, transform, plot);
         }
+        if (hasSwrCircle) DrawSwrCircleLabel(context, plot, swrCircleValue);
         DrawLabels(context, circle, plot, transform);
         DrawMarkers(context, transform, plot);
+        if (_hoverPosition is { } hoverPosition && FindNearestSample(hoverPosition) is { } hoverSample)
+            DrawHoverReadout(context, hoverPosition, hoverSample);
     }
 
     protected override void OnPointerPressed(PointerPressedEventArgs e)
@@ -114,6 +137,8 @@ public sealed class SmithPlotControl : Control
         var position = e.GetPosition(this);
         if (properties.IsMiddleButtonPressed)
         {
+            _hoverPosition = null;
+            InvalidateVisual();
             _isPanning = true;
             _lastPointerPosition = position;
             Focus();
@@ -126,6 +151,8 @@ public sealed class SmithPlotControl : Control
         var isMarker2 = properties.IsRightButtonPressed;
         var selectedFrequency = FindNearestFrequency(position, 18);
         if (selectedFrequency is null) return;
+        _hoverPosition = null;
+        InvalidateVisual();
         _activeMarker2 = isMarker2;
         _dragMarker2 = isMarker2;
         MarkerPicked?.Invoke(selectedFrequency.Value, isMarker2);
@@ -151,10 +178,24 @@ public sealed class SmithPlotControl : Control
             e.Handled = true;
             return;
         }
-        if (_dragMarker2 is not { } isMarker2) return;
-        var frequency = FindNearestFrequency(position, 24);
-        if (frequency is not null) MarkerPicked?.Invoke(frequency.Value, isMarker2);
-        e.Handled = true;
+        if (_dragMarker2 is { } isMarker2)
+        {
+            var frequency = FindNearestFrequency(position, 24);
+            if (frequency is not null) MarkerPicked?.Invoke(frequency.Value, isMarker2);
+            e.Handled = true;
+            return;
+        }
+
+        _hoverPosition = position;
+        InvalidateVisual();
+    }
+
+    protected override void OnPointerExited(PointerEventArgs e)
+    {
+        base.OnPointerExited(e);
+        if (_hoverPosition is null) return;
+        _hoverPosition = null;
+        InvalidateVisual();
     }
 
     protected override void OnPointerReleased(PointerReleasedEventArgs e)
@@ -367,11 +408,133 @@ public sealed class SmithPlotControl : Control
         }
     }
 
+    private void DrawComparisonData(DrawingContext context, SmithChartTransform transform, Rect plot)
+    {
+        foreach (var overlay in ComparisonOverlays)
+        {
+            var verified = new List<SmithComplex>();
+            var positive = new List<SmithComplex>();
+            var negative = new List<SmithComplex>();
+
+            void FlushVerified()
+            {
+                DrawRun(verified, overlay.Color, DashStyle.Dash);
+                verified.Clear();
+            }
+
+            void FlushAmbiguous()
+            {
+                DrawRun(positive, overlay.Color, DashStyle.Dash);
+                DrawRun(negative, overlay.Color, DashStyle.Dot);
+                positive.Clear();
+                negative.Clear();
+            }
+
+            foreach (var point in overlay.Points)
+            {
+                if (!IsInCurrentRange(point) || point.Quality != SampleQuality.Valid ||
+                    !TryGetCandidates(point, overlay.ReferenceImpedanceOhms, out var first, out var second) ||
+                    !SmithChartMath.IsInsideOrOnUnitCircle(first) ||
+                    second is { } mirrored && !SmithChartMath.IsInsideOrOnUnitCircle(mirrored))
+                {
+                    FlushVerified();
+                    FlushAmbiguous();
+                    continue;
+                }
+
+                if (second is { } alternate)
+                {
+                    FlushVerified();
+                    positive.Add(first);
+                    negative.Add(alternate);
+                }
+                else
+                {
+                    FlushAmbiguous();
+                    verified.Add(first);
+                }
+            }
+
+            FlushVerified();
+            FlushAmbiguous();
+
+            void DrawRun(IReadOnlyList<SmithComplex> points, string color, IDashStyle? dash)
+            {
+                if (points.Count == 0) return;
+                var pen = new Pen(new SolidColorBrush(Color.Parse(color)), 1.35, dash);
+                var firstPixel = transform.ToPixel(points[0]);
+                var degenerate = points.Count == 1 || points.Skip(1).All(point =>
+                {
+                    var pixel = transform.ToPixel(point);
+                    var dx = pixel.X - firstPixel.X;
+                    var dy = pixel.Y - firstPixel.Y;
+                    return dx * dx + dy * dy <= 0.25;
+                });
+                if (degenerate)
+                    context.DrawEllipse(null, pen, new Point(plot.Left + firstPixel.X, plot.Top + firstPixel.Y), 1.8, 1.8);
+                else
+                    DrawCurve(context, points, transform, plot, pen, close: false);
+            }
+        }
+    }
+
+    private void DrawSwrCircle(DrawingContext context, SmithChartTransform transform, Rect plot,
+        double reflectionMagnitude)
+    {
+        var centerPixel = transform.ToPixel(SmithChartMath.MatchedReflection);
+        var radiusPixels = reflectionMagnitude * transform.RadiusPixels;
+        if (!double.IsFinite(radiusPixels) || radiusPixels < 0) return;
+
+        var pen = new Pen(new SolidColorBrush(Color.Parse(Palette.GetColor(PlotTrace.Swr))), 1.2, DashStyle.Dash);
+        context.DrawEllipse(null, pen,
+            new Rect(plot.Left + centerPixel.X - radiusPixels, plot.Top + centerPixel.Y - radiusPixels,
+                radiusPixels * 2, radiusPixels * 2));
+    }
+
+    private void DrawSwrCircleLabel(DrawingContext context, Rect plot, double swr)
+    {
+        DrawText(context, Text.Format("SmithSwrCircleValue", swr.ToString("G3", LocalizationService.Instance.Culture)),
+            plot.Right - 82, plot.Top + 4, new SolidColorBrush(Color.Parse(Palette.AxisText)), 8);
+    }
+
+    private bool TryGetSwrCircle(out double swr, out double reflectionMagnitude)
+    {
+        swr = 0;
+        reflectionMagnitude = 0;
+        switch (SwrCircleMode)
+        {
+            case SmithSwrCircleMode.Hidden:
+                return false;
+            case SmithSwrCircleMode.Fixed:
+                if (FixedSwr is not { } fixedSwr || !double.IsFinite(fixedSwr) || fixedSwr < 1)
+                    return false;
+                swr = fixedSwr;
+                reflectionMagnitude = (fixedSwr - 1) / (fixedSwr + 1);
+                return double.IsFinite(reflectionMagnitude) && reflectionMagnitude is >= 0 and <= 1;
+            case SmithSwrCircleMode.Marker1:
+                if (!ShowMarker1 || Marker1Frequency is not { } frequency) return false;
+                var point = Points.FirstOrDefault(item => item.FrequencyHz == frequency &&
+                    item.Quality == SampleQuality.Valid && IsInCurrentRange(item));
+                if (point is null || !TryGetCandidates(point, out var reflection, out _) ||
+                    !SmithChartMath.IsInsideOrOnUnitCircle(reflection)) return false;
+                reflectionMagnitude = reflection.Magnitude;
+                if (!double.IsFinite(reflectionMagnitude) || reflectionMagnitude >= 1) return false;
+                swr = (1 + reflectionMagnitude) / (1 - reflectionMagnitude);
+                return double.IsFinite(swr) && swr >= 1;
+            default:
+                return false;
+        }
+    }
+
     private bool TryGetCandidates(MeasurementPoint point, out SmithComplex primary, out SmithComplex? mirror)
+        => TryGetCandidates(point, ReferenceImpedanceOhms, out primary, out mirror);
+
+    private static bool TryGetCandidates(MeasurementPoint point, double? referenceImpedanceOhms,
+        out SmithComplex primary, out SmithComplex? mirror)
     {
         primary = default;
         mirror = null;
-        var z0 = ReferenceImpedanceOhms is { } reference && double.IsFinite(reference) && reference > 0
+        var z0 = referenceImpedanceOhms is { } reference && double.IsFinite(reference) && reference > 0
             ? reference : (double?)null;
 
         if (point.PhaseSignConfidence == PhaseSignConfidence.Verified)
@@ -451,6 +614,131 @@ public sealed class SmithPlotControl : Control
         }
     }
 
+    private MeasurementPoint? FindNearestSample(Point position)
+    {
+        var plot = GetPlotArea();
+        if (!plot.Contains(position) || Points.Count == 0) return null;
+        var transform = new SmithChartTransform(plot.Width, plot.Height, Math.Clamp(Zoom, 1, 8), PanReal, PanImaginary);
+        var bestDistanceSquared = 14d * 14d;
+        MeasurementPoint? bestPoint = null;
+
+        foreach (var point in Points)
+        {
+            if (!IsInCurrentRange(point) || point.Quality != SampleQuality.Valid ||
+                !TryGetCandidates(point, out var primary, out var mirror) ||
+                !SmithChartMath.IsInsideOrOnUnitCircle(primary) ||
+                mirror is { } alternate && !SmithChartMath.IsInsideOrOnUnitCircle(alternate))
+                continue;
+
+            Consider(primary);
+            if (mirror is { } second) Consider(second);
+
+            void Consider(SmithComplex reflection)
+            {
+                var pixel = transform.ToPixel(reflection);
+                var dx = position.X - (plot.Left + pixel.X);
+                var dy = position.Y - (plot.Top + pixel.Y);
+                var distanceSquared = dx * dx + dy * dy;
+                if (distanceSquared < bestDistanceSquared)
+                {
+                    bestDistanceSquared = distanceSquared;
+                    bestPoint = point;
+                }
+            }
+        }
+
+        return bestPoint;
+    }
+
+    private void DrawHoverReadout(DrawingContext context, Point pointer, MeasurementPoint point)
+    {
+        var culture = LocalizationService.Instance.Culture;
+        var lines = new List<string>
+        {
+            Text.Format("SmithHoverFrequency", (point.FrequencyHz / 1_000_000d).ToString("0.######", culture)),
+        };
+
+        if (TryGetHoverImpedance(point, out var impedance, out var alternate))
+        {
+            if (alternate is { } second)
+            {
+                var magnitude = Math.Abs(impedance.Imaginary);
+                lines.Add(Text.Format("SmithHoverImpedancePositive",
+                    impedance.Real.ToString("0.###", culture), magnitude.ToString("0.###", culture)));
+                lines.Add(Text.Format("SmithHoverImpedanceNegative",
+                    second.Real.ToString("0.###", culture), Math.Abs(second.Imaginary).ToString("0.###", culture)));
+            }
+            else
+            {
+                var sign = impedance.Imaginary < 0 ? "−" : "+";
+                lines.Add(Text.Format("SmithHoverImpedance", impedance.Real.ToString("0.###", culture), sign,
+                    Math.Abs(impedance.Imaginary).ToString("0.###", culture)));
+            }
+        }
+
+        if (ReferenceImpedanceOhms is { } z0 && double.IsFinite(z0) && z0 > 0)
+            lines.Add(Text.Format("SmithHoverReference", z0.ToString("0.##", culture)));
+        else
+            lines.Add(Text.Get("SmithHoverReferenceUnknown"));
+
+        var confidence = point.PhaseSignConfidence switch
+        {
+            PhaseSignConfidence.Verified => Text.Get("SmithSignVerified"),
+            PhaseSignConfidence.Ambiguous => Text.Get("SmithSignAmbiguous"),
+            _ => Text.Get("SmithSignMissing"),
+        };
+        lines.Add(Text.Format("SmithHoverConfidence", confidence));
+
+        var width = Math.Max(0, Math.Min(260, Bounds.Width - 8));
+        var height = lines.Count * 12 + 8;
+        var x = pointer.X + 14;
+        if (x + width > Bounds.Width - 4) x = pointer.X - width - 14;
+        x = Math.Clamp(x, 4, Math.Max(4, Bounds.Width - width - 4));
+        var y = pointer.Y + 14;
+        if (y + height > Bounds.Height - 4) y = pointer.Y - height - 14;
+        y = Math.Clamp(y, 4, Math.Max(4, Bounds.Height - height - 4));
+
+        var rectangle = new Rect(x, y, width, height);
+        context.DrawRectangle(new SolidColorBrush(Color.Parse(Palette.Background)),
+            new Pen(new SolidColorBrush(Color.Parse(Palette.Border)), 1), rectangle);
+        var brush = new SolidColorBrush(Color.Parse(Palette.AxisTitle));
+        for (var index = 0; index < lines.Count; index++)
+            DrawText(context, lines[index], x + 5, y + 4 + index * 12, brush, 8);
+    }
+
+    private bool TryGetHoverImpedance(MeasurementPoint point, out SmithComplex impedance,
+        out SmithComplex? alternate)
+    {
+        impedance = default;
+        alternate = null;
+        if (point.PhaseSignConfidence == PhaseSignConfidence.Missing) return false;
+
+        if (point.ResistanceOhms is { } resistance && point.ReactanceOhms is { } reactance &&
+            double.IsFinite(resistance) && double.IsFinite(reactance))
+        {
+            var imaginary = point.PhaseSignConfidence == PhaseSignConfidence.Ambiguous
+                ? Math.Abs(reactance) : reactance;
+            impedance = new SmithComplex(resistance, imaginary);
+            if (point.PhaseSignConfidence == PhaseSignConfidence.Ambiguous)
+                alternate = impedance.Conjugate;
+            return true;
+        }
+
+        if (ReferenceImpedanceOhms is not { } z0 || !double.IsFinite(z0) || z0 <= 0 ||
+            !TryGetCandidates(point, out var reflection, out var mirrored) ||
+            !SmithChartMath.TryGetImpedanceFromReflection(reflection, z0, out impedance))
+            return false;
+
+        if (point.PhaseSignConfidence == PhaseSignConfidence.Ambiguous)
+        {
+            if (mirrored is { } mirror && SmithChartMath.TryGetImpedanceFromReflection(mirror, z0, out var second))
+                alternate = second;
+            else
+                alternate = impedance.Conjugate;
+        }
+        return true;
+    }
+
     private void DrawLabels(DrawingContext context, Rect circle, Rect plot, SmithChartTransform transform)
     {
         var labelBrush = new SolidColorBrush(Color.Parse(Palette.AxisText));
@@ -460,7 +748,9 @@ public sealed class SmithPlotControl : Control
             circle.Top + circle.Height / 2 + 5, labelBrush, 7);
         DrawText(context, Text.Get("SmithChartTitle"), 6, 4, new SolidColorBrush(Color.Parse(Palette.AxisTitle)), 9);
 
-        if (ReferenceImpedanceOhms is { } z0 && double.IsFinite(z0) && z0 > 0)
+        if (Points.Count == 0 && ComparisonOverlays.Count > 0)
+            DrawText(context, Text.Get("SmithComparisonReferencePerTrace"), 6, 17, labelBrush, 8);
+        else if (ReferenceImpedanceOhms is { } z0 && double.IsFinite(z0) && z0 > 0)
             DrawText(context, Text.Format("SmithReference", z0.ToString("0.##", LocalizationService.Instance.Culture)),
                 6, 17, labelBrush, 8);
         else
@@ -496,6 +786,7 @@ public sealed class SmithPlotControl : Control
     }
 
     private bool IsInCurrentRange(MeasurementPoint point) =>
+        (Points.Count == 0 && ComparisonOverlays.Count > 0) ||
         ViewStopHz <= ViewStartHz || point.FrequencyHz >= ViewStartHz && point.FrequencyHz <= ViewStopHz;
 
     private static void DrawText(DrawingContext context, string text, double x, double y, IBrush brush, double size)

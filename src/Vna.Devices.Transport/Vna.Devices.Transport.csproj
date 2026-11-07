@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>Vna.Devices.Transport</AssemblyName>
+    <RootNamespace>Vna.Devices.Transport</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Vna.Localization\Vna.Localization.csproj" />
+    <PackageReference Include="System.IO.Ports" Version="9.0.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Vna.Tests" />
+  </ItemGroup>
+</Project>

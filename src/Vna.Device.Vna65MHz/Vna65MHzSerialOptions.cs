@@ -1,7 +1,7 @@
-namespace Vna.Devices;
+namespace Vna.Device.Vna65MHz;
 
-/// <summary>Serial defaults verified from the PA7N miniVNA client and Analyser 306b references.</summary>
-public sealed record MiniVnaSerialOptions
+/// <summary>Serial protocol defaults retained from the supported VNA 1–65 MHz profile.</summary>
+public sealed record Vna65MHzSerialOptions
 {
     public int BaudRate { get; init; } = 115_200;
     public int DataBits { get; init; } = 8;

@@ -24,6 +24,11 @@ public sealed class VnaPlotControl : Control
     public event Action<long>? PanRequested;
     public static readonly StyledProperty<IReadOnlyList<MeasurementPoint>> PointsProperty =
         AvaloniaProperty.Register<VnaPlotControl, IReadOnlyList<MeasurementPoint>>(nameof(Points), Array.Empty<MeasurementPoint>());
+    public static readonly StyledProperty<IReadOnlyList<FrequencyComparisonOverlay>> ComparisonOverlaysProperty =
+        AvaloniaProperty.Register<VnaPlotControl, IReadOnlyList<FrequencyComparisonOverlay>>(
+            nameof(ComparisonOverlays), Array.Empty<FrequencyComparisonOverlay>());
+    public static readonly StyledProperty<PlotTrace> ComparisonTraceProperty =
+        AvaloniaProperty.Register<VnaPlotControl, PlotTrace>(nameof(ComparisonTrace), PlotTrace.ReturnLoss);
     public static readonly StyledProperty<PlotTrace> VisibleTracesProperty =
         AvaloniaProperty.Register<VnaPlotControl, PlotTrace>(nameof(VisibleTraces), PlotTrace.All);
     public static readonly StyledProperty<ResponsePlotMode> ResponseModeProperty =
@@ -53,11 +58,18 @@ public sealed class VnaPlotControl : Control
     public static readonly StyledProperty<long> ViewStopHzProperty =
         AvaloniaProperty.Register<VnaPlotControl, long>(nameof(ViewStopHz));
 
-    static VnaPlotControl() => AffectsRender<VnaPlotControl>(PointsProperty, VisibleTracesProperty, ResponseModeProperty, PaletteProperty, LanguageCodeProperty,
+    static VnaPlotControl() => AffectsRender<VnaPlotControl>(PointsProperty, ComparisonOverlaysProperty, ComparisonTraceProperty,
+        VisibleTracesProperty, ResponseModeProperty, PaletteProperty, LanguageCodeProperty,
         Marker1FrequencyProperty, Marker2FrequencyProperty, MinimumSwrFrequencyProperty, ShowMarker1Property, ShowMarker2Property,
         ShowMinimumSwrProperty, Show50OhmReferenceProperty, ReturnLossX2Property, ViewStartHzProperty, ViewStopHzProperty);
 
     public IReadOnlyList<MeasurementPoint> Points { get => GetValue(PointsProperty); set => SetValue(PointsProperty, value); }
+    public IReadOnlyList<FrequencyComparisonOverlay> ComparisonOverlays
+    {
+        get => GetValue(ComparisonOverlaysProperty);
+        set => SetValue(ComparisonOverlaysProperty, value);
+    }
+    public PlotTrace ComparisonTrace { get => GetValue(ComparisonTraceProperty); set => SetValue(ComparisonTraceProperty, value); }
     public PlotTrace VisibleTraces { get => GetValue(VisibleTracesProperty); set => SetValue(VisibleTracesProperty, value); }
     public ResponsePlotMode ResponseMode { get => GetValue(ResponseModeProperty); set => SetValue(ResponseModeProperty, value); }
     public PlotPalette Palette { get => GetValue(PaletteProperty); set => SetValue(PaletteProperty, value); }
@@ -103,9 +115,11 @@ public sealed class VnaPlotControl : Control
             var referencePen = new Pen(new SolidColorBrush(Color.Parse(Palette.GetColor(PlotTrace.Impedance))), 1.2, DashStyle.Dash);
             context.DrawLine(referencePen, new Point(plot.Left, referenceY), new Point(plot.Right, referenceY));
         }
-        if (Points.Count == 0) return;
+        if (Points.Count == 0 && ComparisonOverlays.Count == 0) return;
 
         var transform = new PlotCoordinateTransform(start, stop, plot.Left, plot.Top, plot.Width, plot.Height);
+        DrawComparisonOverlays(context, transform, plot, returnLossAxis);
+        if (Points.Count == 0) return;
         foreach (var trace in PlotSeriesCatalog.All)
         {
             if ((VisibleTraces & trace.Trace) == 0) continue;
@@ -135,6 +149,32 @@ public sealed class VnaPlotControl : Control
         DrawMarker(context, plot, transform, ShowMarker1 ? Marker1Frequency : null, Palette.Marker1);
         DrawMarker(context, plot, transform, ShowMarker2 ? Marker2Frequency : null, Palette.Marker2,
             Palette.IsNightVision ? DashStyle.Dash : null);
+    }
+
+    private void DrawComparisonOverlays(
+        DrawingContext context, PlotCoordinateTransform transform, Rect plot, PlotAxisScale returnLossAxis)
+    {
+        if ((VisibleTraces & ComparisonTrace) == 0) return;
+        var series = PlotSeriesCatalog.All.FirstOrDefault(item => item.Trace == ComparisonTrace);
+        if (series is null) return;
+        var renderedSeries = series.Trace == PlotTrace.ReturnLoss
+            ? series with { Axis = returnLossAxis }
+            : series;
+
+        foreach (var overlay in ComparisonOverlays)
+        {
+            var pen = new Pen(new SolidColorBrush(Color.Parse(overlay.Color)), 1.5, DashStyle.Dash);
+            var geometry = new StreamGeometry();
+            using (var path = geometry.Open())
+                foreach (var run in PlotSeriesGeometry.GetRuns(overlay.Points, renderedSeries, transform))
+                {
+                    if (run.Count == 0) continue;
+                    path.BeginFigure(new Point(run[0].X, run[0].Y), false);
+                    for (var index = 1; index < run.Count; index++) path.LineTo(new Point(run[index].X, run[index].Y));
+                    path.EndFigure(false);
+                }
+            context.DrawGeometry(null, pen, geometry);
+        }
     }
 
     protected override void OnPointerPressed(PointerPressedEventArgs e)
@@ -240,9 +280,29 @@ public sealed class VnaPlotControl : Control
 
     private Rect GetPlotArea() => new(68, 24, Math.Max(1, Bounds.Width - 130), Math.Max(1, Bounds.Height - 56));
 
-    private (long Start, long Stop) GetFrequencyRange() => ViewStopHz > ViewStartHz
-        ? (ViewStartHz, ViewStopHz)
-        : Points.Count == 0 ? (0, 0) : (Points[0].FrequencyHz, Points[^1].FrequencyHz);
+    private (long Start, long Stop) GetFrequencyRange()
+    {
+        if (Points.Count == 0 && ComparisonOverlays.Count > 0)
+        {
+            var overlayFrequencies = ComparisonOverlays.SelectMany(overlay => overlay.Points)
+                .Select(point => point.FrequencyHz).ToArray();
+            if (overlayFrequencies.Length > 0)
+            {
+                var overlayStart = overlayFrequencies.Min();
+                var overlayStop = overlayFrequencies.Max();
+                if (overlayStop > overlayStart) return (overlayStart, overlayStop);
+                if (overlayStart < long.MaxValue) return (overlayStart, overlayStart + 1);
+            }
+        }
+        if (ViewStopHz > ViewStartHz) return (ViewStartHz, ViewStopHz);
+        if (Points.Count > 0) return (Points[0].FrequencyHz, Points[^1].FrequencyHz);
+        var frequencies = ComparisonOverlays.SelectMany(overlay => overlay.Points)
+            .Select(point => point.FrequencyHz).ToArray();
+        if (frequencies.Length == 0) return (0, 0);
+        var start = frequencies.Min();
+        var stop = frequencies.Max();
+        return stop > start ? (start, stop) : (start, start == long.MaxValue ? start : start + 1);
+    }
 
     private static void DrawMarker(
         DrawingContext context,

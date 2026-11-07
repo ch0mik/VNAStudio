@@ -28,7 +28,7 @@ public sealed class SettingsPersistenceTests
         var services = new ServiceCollection();
         services.Configure<AppSettings>(config);
         using var provider = services.BuildServiceProvider();
-        await using var vm = new MainWindowViewModel(new DemoVnaDevice(DeviceProfile.Vna65MHz),
+        await using var vm = new MainWindowViewModel(new DemoVnaDevice(Vna65MHzDeviceProfile.Default),
             new SerialPortCatalog(), provider.GetRequiredService<IOptionsMonitor<AppSettings>>(), path);
         var window = new MainWindow(vm, persistSettingsOnClose: true);
         var closed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -43,7 +43,15 @@ public sealed class SettingsPersistenceTests
             vm.SelectedTheme = vm.Themes.Single(theme => theme.Code == "light");
             vm.SelectedChartView = AntennaChartView.Both;
             window.Close();
-            await closed.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+            var closeDeadline = DateTimeOffset.UtcNow.AddSeconds(5);
+            while (!closed.Task.IsCompleted && !vm.HasError && DateTimeOffset.UtcNow < closeDeadline)
+            {
+                await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background);
+                if (File.Exists(path)) window.Close();
+                await Task.Delay(TimeSpan.FromMilliseconds(10), TestContext.Current.CancellationToken);
+            }
+            Assert.False(vm.HasError, vm.Error);
+            await closed.Task.WaitAsync(TimeSpan.FromSeconds(1), TestContext.Current.CancellationToken);
 
             var saved = JsonSerializer.Deserialize<AppSettings>(await File.ReadAllTextAsync(path))!;
             Assert.Equal("pl-PL", saved.Language);
@@ -57,7 +65,7 @@ public sealed class SettingsPersistenceTests
             var restoredServices = new ServiceCollection();
             restoredServices.Configure<AppSettings>(restoredConfig);
             using var restoredProvider = restoredServices.BuildServiceProvider();
-            await using var restored = new MainWindowViewModel(new DemoVnaDevice(DeviceProfile.Vna65MHz),
+            await using var restored = new MainWindowViewModel(new DemoVnaDevice(Vna65MHzDeviceProfile.Default),
                 new SerialPortCatalog(), restoredProvider.GetRequiredService<IOptionsMonitor<AppSettings>>(), path);
             Assert.Equal("pl-PL", restored.SelectedLanguage!.Code);
             Assert.Equal("light", restored.SelectedTheme.Code);
@@ -67,7 +75,7 @@ public sealed class SettingsPersistenceTests
         finally
         {
             window.Close();
-            File.Delete(path);
+            if (File.Exists(path)) File.Delete(path);
             if (Directory.Exists(directory)) Directory.Delete(directory);
         }
     }
@@ -82,7 +90,7 @@ public sealed class SettingsPersistenceTests
         var services = new ServiceCollection();
         services.Configure<AppSettings>(config);
         using var provider = services.BuildServiceProvider();
-        await using var vm = new MainWindowViewModel(new DemoVnaDevice(DeviceProfile.Vna65MHz),
+        await using var vm = new MainWindowViewModel(new DemoVnaDevice(Vna65MHzDeviceProfile.Default),
             new SerialPortCatalog(), provider.GetRequiredService<IOptionsMonitor<AppSettings>>(), "unused-settings.json");
 
         Assert.Equal(AntennaChartView.Frequency, vm.SelectedChartView);
@@ -97,7 +105,7 @@ public sealed class SettingsPersistenceTests
         var services = new ServiceCollection();
         services.AddOptions<AppSettings>();
         using var provider = services.BuildServiceProvider();
-        await using var vm = new MainWindowViewModel(new DemoVnaDevice(DeviceProfile.Vna65MHz),
+        await using var vm = new MainWindowViewModel(new DemoVnaDevice(Vna65MHzDeviceProfile.Default),
             new SerialPortCatalog(), provider.GetRequiredService<IOptionsMonitor<AppSettings>>(), directory);
         var window = new MainWindow(vm, persistSettingsOnClose: true);
         var closed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);

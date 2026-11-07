@@ -1,8 +1,8 @@
 using Microsoft.Extensions.Configuration;
 
-namespace Vna.IO;
+namespace Vna.Device.Vna65MHz;
 
-/// <summary>Typed view of the relevant sections in the user's Analyser 306b analyz.ini.</summary>
+/// <summary>Typed view of the VNA 1–65 MHz profile settings in the legacy INI format.</summary>
 public sealed class LegacyAnalyzIniOptions
 {
     public LegacyProfileSection Profile { get; set; } = new();

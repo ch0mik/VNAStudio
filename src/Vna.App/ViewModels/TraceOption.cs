@@ -17,6 +17,7 @@ public sealed class TraceOption(PlotTrace trace, string displayNameKey, PlotPale
     private IBrush _brush = new SolidColorBrush(Color.Parse(palette.GetColor(trace)));
     private AvaloniaList<double> _dashPattern = new(palette.GetDashPattern(trace));
     private string _selectedColor = palette.GetColor(trace);
+    private string _defaultColor = palette.GetColor(trace);
     private bool _isColorEditingEnabled = !palette.IsNightVision;
 
     public TraceOption(
@@ -35,7 +36,7 @@ public sealed class TraceOption(PlotTrace trace, string displayNameKey, PlotPale
     }
 
     public PlotTrace Trace { get; } = trace;
-    public string DefaultColor { get; } = palette.GetColor(trace);
+    public string DefaultColor { get => _defaultColor; private set => SetProperty(ref _defaultColor, value); }
     public IReadOnlyList<string> ColorChoices { get; private set; } = AvailableColors;
     public RelayCommand ResetColorCommand { get; private set; } = new(() => { });
     public string SelectedColor { get => _selectedColor; set => SetProperty(ref _selectedColor, value); }
@@ -49,6 +50,15 @@ public sealed class TraceOption(PlotTrace trace, string displayNameKey, PlotPale
         Brush = new SolidColorBrush(Color.Parse(updatedPalette.GetColor(Trace)));
         DashPattern = new(updatedPalette.GetDashPattern(Trace));
         IsColorEditingEnabled = !updatedPalette.IsNightVision;
+    }
+
+    public void ApplyProfileColors(string defaultColor, string selectedColor)
+    {
+        DefaultColor = defaultColor;
+        SelectedColor = selectedColor;
+        ColorChoices = AvailableColors.Append(DefaultColor).Append(SelectedColor)
+            .Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        OnPropertyChanged(nameof(ColorChoices));
     }
     public bool IsVisible
     {

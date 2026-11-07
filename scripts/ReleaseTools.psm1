@@ -41,7 +41,7 @@ function Assert-VnaPublishOutput {
     $executable = if ($Rid.StartsWith('win-')) { 'Vna.App.exe' } else { 'Vna.App' }
     $runtime = if ($Rid.StartsWith('win-')) { 'coreclr.dll' } elseif ($Rid.StartsWith('osx-')) { 'libcoreclr.dylib' } else { 'libcoreclr.so' }
     $required = @($executable, $runtime, 'Vna.App.dll', 'Vna.App.deps.json', 'Vna.App.runtimeconfig.json',
-        'Vna.Core.dll', 'Vna.Devices.dll', 'Vna.IO.dll', 'Vna.Localization.dll',
+        'Vna.Core.dll', 'Vna.Devices.dll', 'Vna.Device.Vna65MHz.dll', 'Vna.IO.dll', 'Vna.Localization.dll',
         'pl/Vna.Localization.resources.dll', 'Assets/analyser306b-65mhz.ini', 'release-info.json')
     if ($Rid.StartsWith('win-')) {
         $required += @('libSkiaSharp.dll', 'libHarfBuzzSharp.dll')

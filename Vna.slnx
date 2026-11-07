@@ -2,8 +2,10 @@
   <Folder Name="/src/">
     <Project Path="src/Vna.Localization/Vna.Localization.csproj" />
     <Project Path="src/Vna.Core/Vna.Core.csproj" />
+    <Project Path="src/Vna.Devices.Transport/Vna.Devices.Transport.csproj" />
     <Project Path="src/Vna.Devices/Vna.Devices.csproj" />
     <Project Path="src/Vna.IO/Vna.IO.csproj" />
+    <Project Path="src/Vna.Device.Vna65MHz/Vna.Device.Vna65MHz.csproj" />
     <Project Path="src/Vna.App/Vna.App.csproj" />
   </Folder>
   <Folder Name="/tests/">

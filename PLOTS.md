@@ -8,8 +8,8 @@ Analiza dwóch zrzutów rozszerzona o instrukcje i zasoby EXE: [macierz brakują
 
 Z instrukcji `VNA - pomiary.pdf` wyodrębniono zrzuty bez uruchamiania aplikacji:
 
-- `../reference/hardware/screenshots/original-page2-R19.png`: pomiar anteny, wieloskalowy wykres i markery.
-- `../reference/hardware/screenshots/original-page3-R26.png`: kolejny ekran pomiarowy.
+- `../VNA-ReverseEngineering/reference/hardware/screenshots/original-page2-R19.png`: pomiar anteny, wieloskalowy wykres i markery.
+- `../VNA-ReverseEngineering/reference/hardware/screenshots/original-page3-R26.png`: kolejny ekran pomiarowy.
 
 Zrzuty w instrukcji mają tytuł starszej wersji programu (V1.3.2), więc są wzorcem rodziny interfejsu, nie potwierdzeniem wyglądu każdej kontrolki wersji 306b. Zasoby EXE i dostarczony INI będą dodatkowym źródłem zgodności.
 
@@ -24,7 +24,15 @@ W zasobach 306b występują kontrolki osi, markerów, kolorów, minimum SWR i zo
 | ScottPlot 5 / ScottPlot.WPF | Szybciej uzyskać działające wykresy, wiele osi i interakcje; MIT | Potrzebne własne ticki, style, reguły skalowania i nadpisanie domyślnych akcji myszy; nie gwarantuje wyglądu 1:1 |
 | OxyPlot / OxyPlot.Wpf | Alternatywa dla wykresów technicznych z osiami i sterowaniem wejściem; MIT | Podobnie wymaga dopasowania osi i interakcji; domyślny styl różni się od oryginału |
 
-Decyzja użytkownika: Avalonia UI z własną kontrolką wykresu. Pierwszy prototyp `VnaPlotControl` rysuje siatkę, zakres częstotliwości, sześć przebiegów w kolorach INI oraz markery M1/M2 i minimum SWR. Używa wstępnych zakresów SWR 1–10, RL −30–0 dB, fazy 0–180° i impedancji 0–300 Ω na podstawie przykładu z instrukcji. Te zakresy i zwroty wymagają potwierdzenia na odczytach 306b, a kontrolka nie ma jeszcze zweryfikowanej geometrii ani responsywności. WPF, ScottPlot i OxyPlot pozostają porównanymi alternatywami.
+Decyzja użytkownika: Avalonia UI z własną kontrolką wykresu. `VnaPlotControl` rysuje siatkę, sześć przebiegów, niezależne osie, markery M1/M2 i minimum SWR. Zakresy ticków pochodzą ze screenshotów tam, gdzie są widoczne, i mają testy numeryczne; pełne profile zakresowe i dokładna geometria legacy pozostają do potwierdzenia. Kontrolka ma responsywny layout, zoom, pan oraz DPI i luki pomiarowe objęte testami. WPF, ScottPlot i OxyPlot pozostają porównanymi alternatywami.
+
+## Aktualny stan implementacji
+
+Powyższy opis prototypu jest historyczny. Obecna kontrolka ma sześć niezależnych skal, ticki i etykiety pozycjonowane wspólną transformacją, luki dla niepoprawnych próbek, markery M1/M2, zoom i przesuwanie, minimum SWR oraz synchronizację z tabelą. Interakcje i responsywność testowano w Avalonia headless dla 1024×768, większych wymiarów i DPI 100/125/150%; okno ma minimum 1024×768 DIP.
+
+Obejrzano podglądy przy minimum, rozmiarze przywróconym i maksymalnym. Lokalny pomiar na 649 syntetycznych punktach, sześciu przebiegach, 1440×900 DIP i 20 renderowaniach headless miał medianę 13,681 ms (zakres 11,803–26,133 ms; wliczając unieważnienie, layout, wymuszony render i przechwycenie obrazu). Jest to pomiar testowego renderera, nie gwarancja wydajności natywnego GUI. Pełna instrukcja: [EN](docs/PLOT-GUIDE.md) · [PL](docs/PLOT-GUIDE.pl.md). Porównanie z dostarczonym zrzutem: [EN](docs/PLOT-COMPARISON.md) · [PL](docs/PLOT-COMPARISON.pl.md). Wektory i ograniczenia tolerancji opisano w [audicie referencyjnym](openspec/changes/port-vna-to-csharp/reference-vectors-and-tolerances.md).
+
+Pozostają niepotwierdzone: profile ticków dla wszystkich zakresów Analyser 306b, pełna zgodność pikselowa z oryginałem oraz fizyczna dokładność kalibracji i znaku reaktancji.
 
 ## Zakres odtworzenia
 

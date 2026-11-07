@@ -10,18 +10,18 @@ using Xunit;
 
 namespace Vna.Tests;
 
-public sealed class MiniVnaSerialDeviceTests
+public sealed class Vna65MHzMeasurementSourceTests
 {
     [Fact]
     public async Task SvnaUsesSixByteSamplesAndLegacyDdsCommands()
     {
         var transport = new BufferTransport(CreatePayload(frameBytes: 6, points: 3));
-        await using var device = new MiniVnaSerialDevice(
-            DeviceProfile.Vna65MHz with { LegacySvna = true },
+        await using var device = new Vna65MHzMeasurementSource(
+            Vna65MHzProtocolSettings.FromLegacyProfile(Vna65MHzDeviceProfile.Default with { LegacySvna = true }),
             transport,
-            Options.Create(new MiniVnaSerialOptions()));
+            Options.Create(new Vna65MHzSerialOptions()));
 
-        await device.ConnectAsync(new DeviceConnectionOptions("/dev/serial/by-id/vna"), TestContext.Current.CancellationToken);
+        await device.ConnectAsync(new DeviceConnectionRequest("/dev/serial/by-id/vna"), TestContext.Current.CancellationToken);
         var settings = new SweepSettings(1_000_000, 4_000_000, 3);
         var points = await device.SweepAsync(settings, TestContext.Current.CancellationToken)
             .ToListAsync(TestContext.Current.CancellationToken);
@@ -30,7 +30,7 @@ public sealed class MiniVnaSerialDeviceTests
         Assert.Equal(points.Select(point => point.FrequencyHz),
             Enumerable.Range(0, settings.PointCount).Select(index => device.GetSampleFrequencyHz(settings, index)));
         Assert.NotEqual(settings.FrequencyAt(settings.PointCount - 1), points[^1].FrequencyHz);
-        Assert.All(points, point => Assert.Equal(20.16 - 256 * DeviceProfile.Vna65MHz.MagnitudeAdcDbPerCount,
+        Assert.All(points, point => Assert.Equal(20.16 - 256 * Vna65MHzDeviceProfile.Default.MagnitudeAdcDbPerCount,
             point.ReturnLossDb!.Value, 6));
         Assert.Equal(new[] { "0\r", "22370411\r", "3\r", "22370411\r" },
             transport.Writes.Select(bytes => Encoding.ASCII.GetString(bytes)));
@@ -45,11 +45,11 @@ public sealed class MiniVnaSerialDeviceTests
     public async Task StandardVnaUsesFourByteSamplesForBothVnaTypes(int vnaType)
     {
         var transport = new BufferTransport(CreatePayload(frameBytes: 4, points: 2));
-        await using var device = new MiniVnaSerialDevice(
-            DeviceProfile.Vna65MHz with { LegacyVnaType = vnaType },
+        await using var device = new Vna65MHzMeasurementSource(
+            Vna65MHzProtocolSettings.FromLegacyProfile(Vna65MHzDeviceProfile.Default with { LegacyVnaType = vnaType }),
             transport,
-            Options.Create(new MiniVnaSerialOptions()));
-        await device.ConnectAsync(new DeviceConnectionOptions("COM12"), TestContext.Current.CancellationToken);
+            Options.Create(new Vna65MHzSerialOptions()));
+        await device.ConnectAsync(new DeviceConnectionRequest("COM12"), TestContext.Current.CancellationToken);
 
         var points = await device.SweepAsync(new SweepSettings(2_000_000, 4_000_000, 2), TestContext.Current.CancellationToken)
             .ToListAsync(TestContext.Current.CancellationToken);
@@ -59,18 +59,46 @@ public sealed class MiniVnaSerialDeviceTests
     }
 
     [Fact]
+    public async Task Captured50OhmFrameIsDecodedAndConvertedThroughTheSerialSource()
+    {
+        // Offline COM9 capture at 1 MHz with a 50-ohm termination: phase ADC 175, magnitude ADC 961.
+        // The second point is only present to satisfy the sweep contract; assertions use the captured first point.
+        var payload = new byte[] { 0xAF, 0x00, 0xC1, 0x03, 0x00, 0x00, 0x00, 0x00 };
+        var transport = new BufferTransport(payload);
+        await using var device = new Vna65MHzMeasurementSource(
+            Vna65MHzProtocolSettings.FromLegacyProfile(Vna65MHzDeviceProfile.Default),
+            transport,
+            Options.Create(new Vna65MHzSerialOptions()));
+        await device.ConnectAsync(new DeviceConnectionRequest("COM9"), TestContext.Current.CancellationToken);
+
+        var settings = new SweepSettings(1_000_000, 3_000_000, 2);
+        var points = await device.SweepAsync(settings, TestContext.Current.CancellationToken)
+            .ToListAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(new[] { 1_000_000L, 2_000_000L }, points.Select(point => point.FrequencyHz));
+        Assert.Equal(-36.203635986, points[0].ReturnLossDb!.Value, 8);
+        Assert.InRange(points[0].Swr!.Value, 1.031, 1.032);
+        Assert.InRange(points[0].ResistanceOhms!.Value, 51, 52);
+        Assert.InRange(Math.Abs(points[0].ReactanceOhms!.Value), 0, 1);
+        Assert.Equal(PhaseSignConfidence.Ambiguous, points[0].PhaseSignConfidence);
+        Assert.Equal(new[] { "0\r", "22370411\r", "2\r", "22370411\r" },
+            transport.Writes.Select(bytes => Encoding.ASCII.GetString(bytes)));
+        Assert.Equal(payload.Length, transport.BytesRequested);
+    }
+
+    [Fact]
     public async Task ScalarTransmissionIsRejectedWithoutSendingUnverifiedCommand()
     {
         var transport = new BufferTransport(CreatePayload(frameBytes: 4, points: 2));
-        await using var device = new MiniVnaSerialDevice(
-            DeviceProfile.Vna65MHz with { LegacyVnaType = 1 },
+        await using var device = new Vna65MHzMeasurementSource(
+            Vna65MHzProtocolSettings.FromLegacyProfile(Vna65MHzDeviceProfile.Default with { LegacyVnaType = 1 }),
             transport,
-            Options.Create(new MiniVnaSerialOptions()));
-        await device.ConnectAsync(new DeviceConnectionOptions("COM9"), TestContext.Current.CancellationToken);
+            Options.Create(new Vna65MHzSerialOptions()));
+        await device.ConnectAsync(new DeviceConnectionRequest("COM9"), TestContext.Current.CancellationToken);
 
         await Assert.ThrowsAsync<InvalidOperationException>(async () =>
             await device.SweepAsync(new SweepSettings(1_000_000, 3_000_000, 2),
-                    DeviceSweepMode.ScalarTransmission, TestContext.Current.CancellationToken)
+                    MeasurementAcquisitionMode.ScalarTransmission, TestContext.Current.CancellationToken)
                 .ToListAsync(TestContext.Current.CancellationToken));
 
         Assert.Empty(transport.Writes);
@@ -81,14 +109,14 @@ public sealed class MiniVnaSerialDeviceTests
     public async Task RepeatedConnectFailureKeepsExistingTransportOpen()
     {
         var transport = new BufferTransport(Array.Empty<byte>());
-        await using var device = new MiniVnaSerialDevice(
-            DeviceProfile.Vna65MHz with { LegacyVnaType = 1 },
+        await using var device = new Vna65MHzMeasurementSource(
+            Vna65MHzProtocolSettings.FromLegacyProfile(Vna65MHzDeviceProfile.Default with { LegacyVnaType = 1 }),
             transport,
-            Options.Create(new MiniVnaSerialOptions()));
-        await device.ConnectAsync(new DeviceConnectionOptions("COM3"), TestContext.Current.CancellationToken);
+            Options.Create(new Vna65MHzSerialOptions()));
+        await device.ConnectAsync(new DeviceConnectionRequest("COM3"), TestContext.Current.CancellationToken);
 
         await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await device.ConnectAsync(new DeviceConnectionOptions("COM4"), TestContext.Current.CancellationToken));
+            await device.ConnectAsync(new DeviceConnectionRequest("COM4"), TestContext.Current.CancellationToken));
 
         Assert.True(transport.IsOpen);
         Assert.Equal(0, transport.CloseCount);
@@ -98,11 +126,13 @@ public sealed class MiniVnaSerialDeviceTests
     [AvaloniaFact]
     public async Task ViewModelAcceptsHardwareDdsGridWhoseLastPointIsBelowStop()
     {
-        var profile = DeviceProfile.Vna65MHz with { LegacyVnaType = 1 };
+        var profile = Vna65MHzDeviceProfile.Default with { LegacyVnaType = 1 };
         var transport = new BufferTransport(CreatePayload(frameBytes: 4, points: 3));
         var router = new VnaDeviceRouter(
             new DemoVnaDevice(profile),
-            new MiniVnaSerialDevice(profile, transport, Options.Create(new MiniVnaSerialOptions())),
+            new MeasurementSourceDeviceAdapter(profile,
+                new Vna65MHzMeasurementSource(Vna65MHzProtocolSettings.FromLegacyProfile(profile), transport, Options.Create(new Vna65MHzSerialOptions())),
+                DevicePluginIds.Vna65MHz),
             DeviceSourceMode.Hardware);
         await using var viewModel = TestData.ViewModel(new Vna.IO.AppSettings
         {
@@ -124,11 +154,11 @@ public sealed class MiniVnaSerialDeviceTests
     public async Task CancellationDuringReadClosesConnectionSoPartialFrameCannotLeakIntoNextSweep()
     {
         var transport = new BufferTransport(Array.Empty<byte>(), blockRead: true);
-        await using var device = new MiniVnaSerialDevice(
-            DeviceProfile.Vna65MHz with { LegacyVnaType = 1 },
+        await using var device = new Vna65MHzMeasurementSource(
+            Vna65MHzProtocolSettings.FromLegacyProfile(Vna65MHzDeviceProfile.Default with { LegacyVnaType = 1 }),
             transport,
-            Options.Create(new MiniVnaSerialOptions { ReadTimeout = TimeSpan.FromMinutes(1) }));
-        await device.ConnectAsync(new DeviceConnectionOptions("COM3"), TestContext.Current.CancellationToken);
+            Options.Create(new Vna65MHzSerialOptions { ReadTimeout = TimeSpan.FromMinutes(1) }));
+        await device.ConnectAsync(new DeviceConnectionRequest("COM3"), TestContext.Current.CancellationToken);
         using var cancellation = new CancellationTokenSource(TimeSpan.FromMilliseconds(20));
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(async () =>
@@ -143,11 +173,11 @@ public sealed class MiniVnaSerialDeviceTests
     public async Task CancellationAfterFirstYieldAlsoClosesConnection()
     {
         var transport = new BufferTransport(CreatePayload(frameBytes: 4, points: 3));
-        await using var device = new MiniVnaSerialDevice(
-            DeviceProfile.Vna65MHz with { LegacyVnaType = 1 },
+        await using var device = new Vna65MHzMeasurementSource(
+            Vna65MHzProtocolSettings.FromLegacyProfile(Vna65MHzDeviceProfile.Default with { LegacyVnaType = 1 }),
             transport,
-            Options.Create(new MiniVnaSerialOptions()));
-        await device.ConnectAsync(new DeviceConnectionOptions("COM3"), TestContext.Current.CancellationToken);
+            Options.Create(new Vna65MHzSerialOptions()));
+        await device.ConnectAsync(new DeviceConnectionRequest("COM3"), TestContext.Current.CancellationToken);
         using var cancellation = new CancellationTokenSource();
         await using var enumerator = device.SweepAsync(
             new SweepSettings(1_000_000, 4_000_000, 3), cancellation.Token).GetAsyncEnumerator(cancellation.Token);
@@ -158,6 +188,56 @@ public sealed class MiniVnaSerialDeviceTests
 
         Assert.False(transport.IsOpen);
         Assert.True(transport.CloseCount >= 1);
+    }
+
+    [Fact]
+    public async Task TimeoutClosesPartialSweepAndAllowsASeparateReconnect()
+    {
+        var transport = new BufferTransport(
+            CreatePayload(frameBytes: 4, points: 2),
+            readFailure: new TimeoutException("Simulated serial timeout."),
+            partialReadBytes: 2);
+        await using var device = new Vna65MHzMeasurementSource(
+            Vna65MHzProtocolSettings.FromLegacyProfile(Vna65MHzDeviceProfile.Default with { LegacyVnaType = 1 }),
+            transport,
+            Options.Create(new Vna65MHzSerialOptions()));
+        var settings = new SweepSettings(1_000_000, 3_000_000, 2);
+        await device.ConnectAsync(new DeviceConnectionRequest("COM3"), TestContext.Current.CancellationToken);
+
+        await Assert.ThrowsAsync<TimeoutException>(async () =>
+            await device.SweepAsync(settings, TestContext.Current.CancellationToken)
+                .ToListAsync(TestContext.Current.CancellationToken));
+
+        Assert.False(transport.IsOpen);
+        Assert.Equal(2, transport.BytesCopiedBeforeInjectedFailure);
+        Assert.Equal(4, transport.Writes.Count);
+        await device.ConnectAsync(new DeviceConnectionRequest("COM3"), TestContext.Current.CancellationToken);
+        var points = await device.SweepAsync(settings, TestContext.Current.CancellationToken)
+            .ToListAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(2, points.Count);
+        Assert.Equal(8, transport.Writes.Count);
+        Assert.True(transport.IsOpen);
+    }
+
+    [Fact]
+    public async Task TruncatedFrameClosesConnectionInsteadOfYieldingPartialSamples()
+    {
+        var transport = new BufferTransport([0xAF, 0x00, 0xC1, 0x03, 0x10, 0x00]);
+        await using var device = new Vna65MHzMeasurementSource(
+            Vna65MHzProtocolSettings.FromLegacyProfile(Vna65MHzDeviceProfile.Default with { LegacyVnaType = 1 }),
+            transport,
+            Options.Create(new Vna65MHzSerialOptions()));
+        await device.ConnectAsync(new DeviceConnectionRequest("COM3"), TestContext.Current.CancellationToken);
+        await using var enumerator = device.SweepAsync(
+            new SweepSettings(1_000_000, 3_000_000, 2), TestContext.Current.CancellationToken)
+            .GetAsyncEnumerator(TestContext.Current.CancellationToken);
+
+        await Assert.ThrowsAsync<EndOfStreamException>(async () => await enumerator.MoveNextAsync());
+
+        Assert.False(transport.IsOpen);
+        Assert.Equal(6, transport.BytesCopiedBeforeEndOfStream);
+        Assert.Equal(8, transport.BytesRequested); // MoveNext fails before yielding the first sample.
     }
 
     private static byte[] CreatePayload(int frameBytes, int points)
@@ -172,11 +252,30 @@ public sealed class MiniVnaSerialDeviceTests
         return payload;
     }
 
-    private sealed class BufferTransport(byte[] payload, bool blockRead = false) : ISerialTransport
+    private sealed class BufferTransport : ISerialTransport
     {
+        private readonly byte[] _payload;
+        private readonly bool _blockRead;
+        private readonly int _partialReadBytes;
+        private Exception? _readFailure;
         private int _offset;
+
+        public BufferTransport(
+            byte[] payload,
+            bool blockRead = false,
+            Exception? readFailure = null,
+            int partialReadBytes = 0)
+        {
+            _payload = payload;
+            _blockRead = blockRead;
+            _readFailure = readFailure;
+            _partialReadBytes = partialReadBytes;
+        }
+
         public bool IsOpen { get; private set; }
         public int BytesRequested { get; private set; }
+        public int BytesCopiedBeforeInjectedFailure { get; private set; }
+        public int BytesCopiedBeforeEndOfStream { get; private set; }
         public int CloseCount { get; private set; }
         public SerialConnectionSettings? OpenSettings { get; private set; }
         public List<byte[]> Writes { get; } = [];
@@ -186,6 +285,7 @@ public sealed class MiniVnaSerialDeviceTests
             cancellationToken.ThrowIfCancellationRequested();
             OpenSettings = settings;
             IsOpen = true;
+            _offset = 0;
             return ValueTask.CompletedTask;
         }
 
@@ -199,11 +299,32 @@ public sealed class MiniVnaSerialDeviceTests
         public async ValueTask ReadExactlyAsync(Memory<byte> destination, TimeSpan timeout, CancellationToken cancellationToken = default)
         {
             BytesRequested += destination.Length;
-            if (blockRead)
+            if (_blockRead)
                 await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
-            if (payload.Length - _offset < destination.Length)
+            if (_readFailure is { } readFailure)
+            {
+                _readFailure = null;
+                var copied = Math.Min(Math.Min(_partialReadBytes, destination.Length), _payload.Length - _offset);
+                if (copied > 0)
+                {
+                    _payload.AsMemory(_offset, copied).CopyTo(destination);
+                    _offset += copied;
+                    BytesCopiedBeforeInjectedFailure += copied;
+                }
+                throw readFailure;
+            }
+            if (_payload.Length - _offset < destination.Length)
+            {
+                var copied = Math.Max(0, _payload.Length - _offset);
+                if (copied > 0)
+                {
+                    _payload.AsMemory(_offset, copied).CopyTo(destination);
+                    _offset += copied;
+                    BytesCopiedBeforeEndOfStream += copied;
+                }
                 throw new EndOfStreamException();
-            payload.AsMemory(_offset, destination.Length).CopyTo(destination);
+            }
+            _payload.AsMemory(_offset, destination.Length).CopyTo(destination);
             _offset += destination.Length;
         }
 

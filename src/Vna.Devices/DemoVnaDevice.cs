@@ -7,9 +7,18 @@ namespace Vna.Devices;
 public sealed class DemoVnaDevice : IVnaDevice
 {
     private readonly DeviceProfile _profile;
+    private readonly DeviceProfileDescriptor? _descriptor;
+    private readonly double? _referenceImpedanceOhms;
     private bool _isConnected;
 
-    public DemoVnaDevice(DeviceProfile profile) => _profile = profile;
+    public DemoVnaDevice(DeviceProfile profile, DeviceProfileDescriptor? descriptor = null)
+    {
+        _profile = profile ?? throw new ArgumentNullException(nameof(profile));
+        _descriptor = descriptor;
+        if (descriptor is not null && !string.Equals(profile.Id, descriptor.Id, StringComparison.Ordinal))
+            throw new ArgumentException("The demo profile descriptor does not match the compatibility profile.", nameof(descriptor));
+        _referenceImpedanceOhms = descriptor is null ? profile.ReferenceImpedanceOhms : descriptor.ReferenceImpedanceOhms;
+    }
 
     public DeviceProfile Profile => _profile;
     public string DataSourceName => "demo";
@@ -42,13 +51,16 @@ public sealed class DemoVnaDevice : IVnaDevice
             throw LocalizedErrors.InvalidOperation("DeviceConnectFirst");
         if (!Enum.IsDefined(mode)) throw new ArgumentOutOfRangeException(nameof(mode));
 
-        settings.ValidateAgainst(Profile);
+        if (_descriptor is { } descriptor)
+            settings.ValidateAgainst(descriptor);
+        else
+            settings.ValidateAgainst(Profile);
 
         for (var index = 0; index < settings.PointCount; index++)
         {
             cancellationToken.ThrowIfCancellationRequested();
             yield return mode == DeviceSweepMode.Reflection
-                ? CreateIllustrativePoint(settings.FrequencyAt(index), Profile)
+                ? CreateIllustrativePoint(settings.FrequencyAt(index), _referenceImpedanceOhms)
                 : CreateIllustrativeTransmissionPoint(settings.FrequencyAt(index));
 
             if ((index & 31) == 31)
@@ -58,7 +70,7 @@ public sealed class DemoVnaDevice : IVnaDevice
 
     public ValueTask DisposeAsync() => DisconnectAsync();
 
-    private static MeasurementPoint CreateIllustrativePoint(long frequencyHz, DeviceProfile profile)
+    private static MeasurementPoint CreateIllustrativePoint(long frequencyHz, double? referenceImpedanceOhms)
     {
         var frequencyMHz = frequencyHz / 1_000_000.0;
 
@@ -70,8 +82,11 @@ public sealed class DemoVnaDevice : IVnaDevice
                        - 35 * Math.Tanh((frequencyMHz - 27.1) / 1.1);
         var signedReturnLossDb = 20 * Math.Log10(reflectionMagnitude);
 
-        return RfSampleCalculator.FromReturnLossAndPhase(
-            frequencyHz, signedReturnLossDb, phase, profile) with
+        var swr = reflectionMagnitude < 1 ? (1 + reflectionMagnitude) / (1 - reflectionMagnitude) : (double?)null;
+        var point = referenceImpedanceOhms is { } reference
+            ? RfSampleCalculator.FromReturnLossAndPhase(frequencyHz, signedReturnLossDb, phase, reference)
+            : new MeasurementPoint(frequencyHz, swr, signedReturnLossDb, phase, null, null, null);
+        return point with
         {
             PhaseSignConfidence = PhaseSignConfidence.Verified,
             PhaseSignProvenance = PhaseSignProvenance.AnalyticDemo,
